@@ -1,0 +1,8 @@
+# Variables de entorno - NUNCA subir a Git
+.env
+
+# Backups
+backups/
+
+# pgAdmin
+pgadmin_data/

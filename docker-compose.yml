@@ -1,0 +1,97 @@
+# ============================================================
+# AGROPLATAFORMA DIGITAL - MAIZ NATIVO HUASTECA POTOSINA
+# PEE-2025-G-369 | TecNM Ciudad Valles
+# Docker Compose v3.0 - 7 esquemas + catalogo territorial
+# ============================================================
+
+services:
+
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: agroplataforma_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       agroplataforma
+      POSTGRES_USER:     agro_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-huasteca2025}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/01_maestro.sql:/docker-entrypoint-initdb.d/01_maestro.sql
+      - ./db/02_catalogo.sql:/docker-entrypoint-initdb.d/02_catalogo.sql
+      - ./db/03_social.sql:/docker-entrypoint-initdb.d/03_social.sql
+      - ./db/04_cultural.sql:/docker-entrypoint-initdb.d/04_cultural.sql
+      - ./db/05_geografico.sql:/docker-entrypoint-initdb.d/05_geografico.sql
+      - ./db/06_ambiental.sql:/docker-entrypoint-initdb.d/06_ambiental.sql
+      - ./db/07_agronomico.sql:/docker-entrypoint-initdb.d/07_agronomico.sql
+      - ./db/08_fenotipico.sql:/docker-entrypoint-initdb.d/08_fenotipico.sql
+      - ./db/09_vistas.sql:/docker-entrypoint-initdb.d/09_vistas.sql
+      - ./db/10_datos_base.sql:/docker-entrypoint-initdb.d/10_datos_base.sql
+      - ./db/11_localidades_colonias.sql:/docker-entrypoint-initdb.d/11_localidades_colonias.sql
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agro_admin -d agroplataforma"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agro_network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: agroplataforma_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL:                   ${PGADMIN_EMAIL:-admin@tecnm.mx}
+      PGADMIN_DEFAULT_PASSWORD:                ${PGADMIN_PASSWORD:-admin2025}
+      PGADMIN_CONFIG_SERVER_MODE:              "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin_servers.json:/pgadmin4/servers.json
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - agro_network
+
+  backup:
+    image: alpine:3.19
+    container_name: agroplataforma_backup
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-huasteca2025}
+      PGHOST: db
+      PGUSER: agro_admin
+      PGDATABASE: agroplataforma
+    volumes:
+      - ./backups:/backups
+    entrypoint: >
+      /bin/sh -c "
+        apk add --no-cache postgresql-client > /dev/null 2>&1;
+        while true; do
+          sleep 86400;
+          FECHA=$$(date +%Y%m%d_%H%M);
+          pg_dump > /backups/backup_$$FECHA.dump;
+          ls -t /backups/backup_*.dump | tail -n +8 | xargs rm -f;
+        done
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - agro_network
+
+volumes:
+  pgdata:
+    name: agroplataforma_pgdata
+  pgadmin_data:
+    name: agroplataforma_pgadmin
+
+networks:
+  agro_network:
+    name: agro_network
+    driver: bridge

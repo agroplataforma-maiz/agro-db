@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Agroplataforma - Maíz Nativo",
+      "Group": "TecNM Ciudad Valles",
+      "Host": "db",
+      "Port": 5432,
+      "MaintenanceDB": "agroplataforma",
+      "Username": "agro_admin",
+      "SSLMode": "prefer",
+      "Comment": "PEE-2025-G-369 | Base de datos principal"
+    }
+  }
+}
