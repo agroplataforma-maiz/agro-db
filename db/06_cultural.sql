@@ -4,8 +4,8 @@
 -- PEE-2025-G-369 | TecNM Ciudad Valles
 -- Versión: 1.0 | Etapa 1
 --
--- EJECUTAR DESPUÉS de 02_social.sql
--- EJECUTAR ANTES de 03_geografico.sql
+-- EJECUTAR DESPUÉS de 05_agronomico.sql
+-- EJECUTAR ANTES de 07_fenotipico.sql
 --
 -- Tablas:
 --   1. saber_tradicional
@@ -17,7 +17,6 @@
 --   7. nombre_lengua_originaria
 -- ============================================================
 
-CREATE SCHEMA IF NOT EXISTS cultural;
 SET search_path TO cultural, public;
 
 -- ============================================================
@@ -26,38 +25,25 @@ SET search_path TO cultural, public;
 --    capturado durante entrevistas etnográficas
 -- ============================================================
 
-CREATE TABLE cultural.saber_tradicional (
+CREATE TABLE IF NOT EXISTS cultural.saber_tradicional (
     id                          SERIAL PRIMARY KEY,
-    productor_id                INTEGER REFERENCES social.productor(id),    -- FK a social.productor
-    comunidad_id                INTEGER REFERENCES catalogo.comunidad(id),    -- FK a catalogo.comunidad
+    productor_id                INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a social.productor
+    comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
 
     -- Categoría del saber
-    categoria                   VARCHAR(80) CHECK (categoria IN (
-                                    'preparacion_suelo',
-                                    'seleccion_semilla',
-                                    'siembra',
-                                    'manejo_cultivo',
-                                    'control_plagas_tradicional',
-                                    'cosecha',
-                                    'almacenamiento',
-                                    'prediccion_clima',
-                                    'asociacion_plantas',
-                                    'uso_medicinal',
-                                    'calendario_agricola',
-                                    'otro'
-                                )),
+    categoria_saber_agricola_id INTEGER NOT NULL REFERENCES catalogo.categoria_saber_agricola(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.categoria_saber_agricola
 
     -- Descripción (voz del productor)
     descripcion                 TEXT NOT NULL,
     descripcion_lengua_orig     TEXT,       -- en lengua originaria si aplica
-    lengua_id                   INTEGER,    -- FK a catalogo.lengua
+    lengua_id                   INTEGER NOT NULL REFERENCES catalogo.lengua(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.lengua
 
     -- Contexto de transmisión
     aprendio_de                 VARCHAR(50) CHECK (aprendio_de IN (
                                     'padre','madre','abuelo','abuela',
                                     'familiar','vecino','comunidad','otro'
                                 )),
-    generaciones_estimadas      SMALLINT,   -- cuántas generaciones lleva este saber
+    generaciones_estimadas      SMALLINT CHECK (generaciones_estimadas >= 0),   -- cuántas generaciones lleva este saber
 
     -- Vigencia
     esta_vigente                BOOLEAN DEFAULT TRUE,
@@ -75,7 +61,8 @@ CREATE TABLE cultural.saber_tradicional (
 
     fecha_registro              DATE DEFAULT CURRENT_DATE,
     registrado_por              VARCHAR(150),
-    created_at                  TIMESTAMP DEFAULT NOW()
+    created_at                  TIMESTAMP DEFAULT NOW(),
+    updated_at                  TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================================
@@ -83,9 +70,9 @@ CREATE TABLE cultural.saber_tradicional (
 --    Prácticas rituales vinculadas al ciclo del maíz
 -- ============================================================
 
-CREATE TABLE cultural.ritual_agricola (
+CREATE TABLE IF NOT EXISTS cultural.ritual_agricola (
     id                          SERIAL PRIMARY KEY,
-    comunidad_id                INTEGER REFERENCES catalogo.comunidad(id),    -- FK a catalogo.comunidad
+    comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
 
     -- Identificación
     nombre                      VARCHAR(200) NOT NULL,
@@ -93,21 +80,11 @@ CREATE TABLE cultural.ritual_agricola (
     lengua_id                   INTEGER REFERENCES catalogo.lengua(id),    -- FK a catalogo.lengua
 
     -- Tipo y momento en el ciclo agrícola
-    tipo                        VARCHAR(60) CHECK (tipo IN (
-                                    'siembra',
-                                    'crecimiento',
-                                    'cosecha',
-                                    'almacenamiento',
-                                    'intercambio_semillas',
-                                    'peticion_lluvia',
-                                    'agradecimiento',
-                                    'otro'
-                                )),
+    tipo_ritual_agricola_id INTEGER NOT NULL REFERENCES catalogo.tipo_ritual_agricola(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.tipo_ritual_agricola
     mes_aproximado              SMALLINT CHECK (mes_aproximado BETWEEN 1 AND 12),
     vinculado_ciclo_agricola    VARCHAR(30) CHECK (vinculado_ciclo_agricola IN (
                                     'Primavera-Verano','Otoño-Invierno','ambos','sin_ciclo_fijo'
                                 )),
-
     -- Descripción
     descripcion                 TEXT NOT NULL,
     descripcion_lengua_orig     TEXT,
@@ -131,13 +108,14 @@ CREATE TABLE cultural.ritual_agricola (
 
     fecha_registro              DATE DEFAULT CURRENT_DATE,
     registrado_por              VARCHAR(150),
-    created_at                  TIMESTAMP DEFAULT NOW()
+    created_at                  TIMESTAMP DEFAULT NOW(),
+    updated_at                  TIMESTAMP DEFAULT NOW()
 );
 
 -- Productores que conocen o participan en el ritual (N:M)
-CREATE TABLE cultural.ritual_productor (
-    ritual_id       INTEGER REFERENCES cultural.ritual_agricola(id),
-    productor_id    INTEGER REFERENCES social.productor(id),    -- FK a social.productor
+CREATE TABLE IF NOT EXISTS cultural.ritual_productor (
+    ritual_id       INTEGER NOT NULL REFERENCES cultural.ritual_agricola(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    productor_id    INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a social.productor
     rol             VARCHAR(100),   -- ej. organizador, participante, informante
     PRIMARY KEY (ritual_id, productor_id)
 );
@@ -147,22 +125,13 @@ CREATE TABLE cultural.ritual_productor (
 --    Mitos, relatos, leyendas y cosmovisión relacionada al maíz
 -- ============================================================
 
-CREATE TABLE cultural.narrativa_oral (
+CREATE TABLE IF NOT EXISTS cultural.narrativa_oral (
     id                          SERIAL PRIMARY KEY,
-    comunidad_id                INTEGER REFERENCES catalogo.comunidad(id),    -- FK a catalogo.comunidad
-    productor_id                INTEGER REFERENCES social.productor(id),    -- FK a social.productor (narrador)
+    comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
+    productor_id                INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a social.productor (narrador)
 
     -- Clasificación
-    tipo                        VARCHAR(50) CHECK (tipo IN (
-                                    'mito_origen',
-                                    'leyenda',
-                                    'cuento',
-                                    'refrán',
-                                    'cancion',
-                                    'oracion_agricola',
-                                    'testimonio',
-                                    'otro'
-                                )),
+    tipo_narrativa_oral_id INTEGER NOT NULL REFERENCES catalogo.tipo_narrativa_oral(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.tipo_narrativa_oral      ,
     titulo                      VARCHAR(300),
     titulo_lengua_orig          VARCHAR(300),
     lengua_id                   INTEGER REFERENCES catalogo.lengua(id),    -- FK a catalogo.lengua
@@ -174,14 +143,8 @@ CREATE TABLE cultural.narrativa_oral (
     temas_principales           TEXT,               -- maíz, lluvia, tierra, deidades, etc.
 
     -- Vínculo con el maíz
-    vinculo_maiz                VARCHAR(50) CHECK (vinculo_maiz IN (
-                                    'origen_del_maiz',
-                                    'manejo_del_cultivo',
-                                    'seleccion_semilla',
-                                    'cosmovisión_agricola',
-                                    'identidad_cultural',
-                                    'otro'
-                                )),
+    vinculo_maiz_id INTEGER REFERENCES catalogo.vinculo_maiz(id) ON DELETE SET NULL ON UPDATE CASCADE,    -- FK a catalogo.vinculo_maiz
+    descripcion_vinculo_maiz     TEXT,               -- en qué consiste el vínculo con el maíz
 
     -- Contexto
     circunstancia_narracion     TEXT,   -- cuándo y dónde se narra normalmente
@@ -189,7 +152,7 @@ CREATE TABLE cultural.narrativa_oral (
 
     -- Transmisión
     aprendio_de                 VARCHAR(100),
-    generaciones_estimadas      SMALLINT,
+    generaciones_estimadas      SMALLINT CHECK (generaciones_estimadas >= 0),
     esta_vigente                BOOLEAN DEFAULT TRUE,
 
     -- Evidencia
@@ -199,7 +162,8 @@ CREATE TABLE cultural.narrativa_oral (
 
     fecha_registro              DATE DEFAULT CURRENT_DATE,
     registrado_por              VARCHAR(150),
-    created_at                  TIMESTAMP DEFAULT NOW()
+    created_at                  TIMESTAMP DEFAULT NOW(),
+    updated_at                  TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================================
@@ -207,9 +171,9 @@ CREATE TABLE cultural.narrativa_oral (
 --    Recetas y preparaciones derivadas del maíz nativo
 -- ============================================================
 
-CREATE TABLE cultural.gastronomia_tradicional (
+CREATE TABLE IF NOT EXISTS cultural.gastronomia_tradicional (
     id                          SERIAL PRIMARY KEY,
-    comunidad_id                INTEGER REFERENCES catalogo.comunidad(id),    -- FK a catalogo.comunidad
+    comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
 
     -- Identificación
     nombre_platillo             VARCHAR(200) NOT NULL,
@@ -217,25 +181,8 @@ CREATE TABLE cultural.gastronomia_tradicional (
     lengua_id                   INTEGER REFERENCES catalogo.lengua(id),    -- FK a catalogo.lengua
 
     -- Categoría
-    tipo                        VARCHAR(50) CHECK (tipo IN (
-                                    'tortilla',
-                                    'tamal',
-                                    'atole',
-                                    'pozole',
-                                    'bebida_fermentada',
-                                    'elote_preparado',
-                                    'masa_especialidad',
-                                    'dulce',
-                                    'otro'
-                                )),
-    ocasion                     VARCHAR(80) CHECK (ocasion IN (
-                                    'cotidiana',
-                                    'festiva',
-                                    'ritual',
-                                    'medicinal',
-                                    'intercambio',
-                                    'otra'
-                                )),
+    uso_maiz_id INTEGER REFERENCES catalogo.uso_maiz(id) ON DELETE SET NULL ON UPDATE CASCADE,    -- FK a catalogo.uso_maiz
+    ocasion_id INTEGER REFERENCES catalogo.ocasion(id) ON DELETE SET NULL ON UPDATE CASCADE,    -- FK a catalogo.ocasion
 
     -- Ingredientes y preparación
     ingredientes_principales    TEXT,
@@ -264,13 +211,14 @@ CREATE TABLE cultural.gastronomia_tradicional (
 
     fecha_registro              DATE DEFAULT CURRENT_DATE,
     registrado_por              VARCHAR(150),
-    created_at                  TIMESTAMP DEFAULT NOW()
+    created_at                  TIMESTAMP DEFAULT NOW(),
+    updated_at                  TIMESTAMP DEFAULT NOW()
 );
 
 -- Productores que conocen o preparan el platillo (N:M)
-CREATE TABLE cultural.gastronomia_productor (
-    gastronomia_id  INTEGER REFERENCES cultural.gastronomia_tradicional(id),
-    productor_id    INTEGER REFERENCES social.productor(id),    -- FK a social.productor
+CREATE TABLE IF NOT EXISTS cultural.gastronomia_productor (
+    gastronomia_id  INTEGER NOT NULL REFERENCES cultural.gastronomia_tradicional(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    productor_id    INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a social.productor
     es_preparador   BOOLEAN DEFAULT TRUE,   -- si lo prepara o solo lo conoce
     PRIMARY KEY (gastronomia_id, productor_id)
 );
@@ -280,7 +228,7 @@ CREATE TABLE cultural.gastronomia_productor (
 --    Cómo se transfiere el conocimiento sobre el maíz nativo
 -- ============================================================
 
-CREATE TABLE cultural.transmision_conocimiento (
+CREATE TABLE IF NOT EXISTS cultural.transmision_conocimiento (
     id                              SERIAL PRIMARY KEY,
     productor_id                    INTEGER REFERENCES social.productor(id),    -- FK a social.productor
 
@@ -290,21 +238,14 @@ CREATE TABLE cultural.transmision_conocimiento (
                                         'bisabuelos','abuelos','padres',
                                         'tios','comunidad','otro'
                                     )),
-    edad_inicio_aprendizaje         SMALLINT,   -- a qué edad empezó a aprender
+    edad_inicio_aprendizaje         SMALLINT CHECK (edad_inicio_aprendizaje BETWEEN 0 AND 100),   -- a qué edad empezó a aprender
 
     -- Transmisión activa
     transmite_a_hijos               BOOLEAN DEFAULT FALSE,
     transmite_a_nietos              BOOLEAN DEFAULT FALSE,
     transmite_a_comunidad           BOOLEAN DEFAULT FALSE,
     transmite_a_jovenes             BOOLEAN DEFAULT FALSE,
-    mecanismo_transmision           VARCHAR(50) CHECK (mecanismo_transmision IN (
-                                        'practica_directa',
-                                        'narración_oral',
-                                        'participacion_ritual',
-                                        'escuela_comunitaria',
-                                        'milpa_familiar',
-                                        'otro'
-                                    )),
+    mecanismo_transmision_id INTEGER REFERENCES catalogo.mecanismo_transmision(id) ON DELETE SET NULL ON UPDATE CASCADE,    -- FK a catalogo.mecanismo_transmision
     descripcion_transmision         TEXT,
 
     -- Barreras para la transmisión
@@ -332,7 +273,8 @@ CREATE TABLE cultural.transmision_conocimiento (
 
     fecha_registro                  DATE DEFAULT CURRENT_DATE,
     registrado_por                  VARCHAR(150),
-    created_at                      TIMESTAMP DEFAULT NOW()
+    created_at                      TIMESTAMP DEFAULT NOW(),
+    updated_at                      TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================================
@@ -340,7 +282,7 @@ CREATE TABLE cultural.transmision_conocimiento (
 --    Vínculo del productor con el maíz como elemento identitario
 -- ============================================================
 
-CREATE TABLE cultural.identidad_cultural (
+CREATE TABLE IF NOT EXISTS cultural.identidad_cultural (
     id                              SERIAL PRIMARY KEY,
     productor_id                    INTEGER REFERENCES social.productor(id),    -- FK a social.productor
 
@@ -378,7 +320,8 @@ CREATE TABLE cultural.identidad_cultural (
 
     fecha_registro                  DATE DEFAULT CURRENT_DATE,
     registrado_por                  VARCHAR(150),
-    created_at                      TIMESTAMP DEFAULT NOW()
+    created_at                      TIMESTAMP DEFAULT NOW(),
+    updated_at                      TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================================
@@ -386,9 +329,9 @@ CREATE TABLE cultural.identidad_cultural (
 --    Registro lingüístico de los nombres nativos del maíz
 -- ============================================================
 
-CREATE TABLE cultural.nombre_lengua_originaria (
+CREATE TABLE IF NOT EXISTS cultural.nombre_lengua_originaria (
     id                      SERIAL PRIMARY KEY,
-    germoplasma_id          INTEGER,    -- FK a agronomico.germoplasma
+    germoplasma_id          INTEGER REFERENCES agronomico.germoplasma(id),    -- FK a agronomico.germoplasma
     lengua_id               INTEGER REFERENCES catalogo.lengua(id),    -- FK a catalogo.lengua
     comunidad_id            INTEGER REFERENCES catalogo.comunidad(id),    -- FK a catalogo.comunidad
 
@@ -414,125 +357,116 @@ CREATE TABLE cultural.nombre_lengua_originaria (
     fecha_registro          DATE DEFAULT CURRENT_DATE,
     registrado_por          VARCHAR(150),
     created_at              TIMESTAMP DEFAULT NOW(),
+    updated_at              TIMESTAMP DEFAULT NOW(),
 
     UNIQUE (germoplasma_id, lengua_id, nombre)
 );
 
 -- ============================================================
--- ÍNDICES PARA CONSULTAS FRECUENTES
--- Optimización de consultas por comunidad
+-- 8. MEDIO CULTURAL
+--    Repositorio centralizado de archivos multimedia capturados
+--    durante las entrevistas etnográficas (F5).
+--
+--    Diseño: una fila por archivo.
+--    El campo entidad_tipo + entidad_id apunta a la tabla de origen
+--    (saber_tradicional, ritual_agricola, narrativa_oral, etc.)
+--    sin necesidad de FK rígidas hacia cada tabla.
 -- ============================================================
 
-CREATE INDEX idx_saber_comunidad 
-ON cultural.saber_tradicional(comunidad_id);
+CREATE TABLE IF NOT EXISTS cultural.medio_cultural (
+    id              SERIAL PRIMARY KEY,
 
-CREATE INDEX idx_ritual_comunidad 
-ON cultural.ritual_agricola(comunidad_id);
+    -- Referencia polimórfica al registro cultural que documenta
+    entidad_tipo    VARCHAR(60) NOT NULL CHECK (entidad_tipo IN (
+                        'saber_tradicional',
+                        'ritual_agricola',
+                        'narrativa_oral',
+                        'gastronomia_tradicional',
+                        'nombre_lengua_originaria',
+                        'identidad_cultural',
+                        'transmision_conocimiento',
+                        'sesion_entrevista'       -- para medios del cierre general
+                    )),
+    entidad_id      INTEGER NOT NULL,   -- id del registro en la tabla indicada
 
-CREATE INDEX idx_narrativa_comunidad 
-ON cultural.narrativa_oral(comunidad_id);
+    -- Identificación del archivo
+    tipo_medio      VARCHAR(20) NOT NULL CHECK (tipo_medio IN (
+                        'foto', 'audio', 'video'
+                    )),
+    nombre_archivo  VARCHAR(300) NOT NULL,  -- nombre exportado por KoboToolbox
+    -- La ruta completa se construye como:
+    --   <ruta_base_proyecto>/<form_id>/<uuid_envio>/<nombre_archivo>
+    -- KoboToolbox la entrega en el media attachment del JSON de exportación.
 
-CREATE INDEX idx_nombre_lengua_germoplasma
-ON cultural.nombre_lengua_originaria(germoplasma_id);
+    -- Contexto de captura (del campo Kobo que lo originó)
+    campo_origen    VARCHAR(100),   -- ej. foto_saber1, audio_ritual1, foto_platillo2
+    descripcion     TEXT,           -- descripción libre del encuestador
 
--- Índices adicionales para consultas por productor
-CREATE INDEX idx_saber_productor
-ON cultural.saber_tradicional(productor_id);
+    -- Consentimiento (heredado del consentimiento del productor en F1)
+    consentimiento_verificado BOOLEAN DEFAULT FALSE,
+    productor_id    INTEGER REFERENCES social.productor(id),
 
-CREATE INDEX idx_narrativa_productor
-ON cultural.narrativa_oral(productor_id);
+    -- Metadatos técnicos (opcionales, para enriquecer en post-proceso)
+    duracion_seg    INTEGER,        -- solo para audio/video
+    resolucion      VARCHAR(30),    -- ej. "1920x1080", "4032x3024"
+    peso_kb         INTEGER,
+    formato         VARCHAR(20),    -- jpg, png, mp3, wav, mp4, etc.
 
-CREATE INDEX idx_identidad_productor
-ON cultural.identidad_cultural(productor_id);
+    -- Trazabilidad
+    uuid_envio      VARCHAR(100),   -- _uuid del envío en KoboToolbox
+    fecha_captura   DATE DEFAULT CURRENT_DATE,
+    created_at      TIMESTAMP DEFAULT NOW(),
+    updated_at      TIMESTAMP DEFAULT NOW()
+);
 
-CREATE INDEX idx_transmision_productor
-ON cultural.transmision_conocimiento(productor_id);
 
 -- ============================================================
--- VISTAS DEL EJE CULTURAL
+-- 9. SESIÓN DE ENTREVISTA
+--    Metadatos de cada sesión del formulario F5:
+--    vinculación con el productor (F1), GPS del lugar,
+--    duración, lengua y estado de la entrevista.
 -- ============================================================
 
--- Vista: mapa de saberes por comunidad
-CREATE VIEW cultural.v_saberes_comunidad AS
-SELECT
-    mun.nombre          AS municipio,
-    com.nombre          AS comunidad,
-    com.tipo            AS tipo_comunidad,
-    COUNT(DISTINCT st.id)                                AS total_saberes,
-    COUNT(DISTINCT ra.id)                                AS total_rituales,
-    COUNT(DISTINCT no.id)                                AS total_narrativas,
-    COUNT(DISTINCT gt.id)                                AS total_platillos,
-    SUM(CASE WHEN st.esta_vigente THEN 1 ELSE 0 END)     AS saberes_vigentes,
-    SUM(CASE WHEN NOT st.esta_vigente THEN 1 ELSE 0 END) AS saberes_en_riesgo,
-    SUM(CASE WHEN ra.esta_vigente THEN 1 ELSE 0 END)     AS rituales_vigentes
-FROM catalogo.comunidad com
-JOIN catalogo.municipio mun                         ON mun.id = com.municipio_id
-LEFT JOIN cultural.saber_tradicional st             ON st.comunidad_id = com.id
-LEFT JOIN cultural.ritual_agricola ra               ON ra.comunidad_id = com.id
-LEFT JOIN cultural.narrativa_oral no                ON no.comunidad_id = com.id
-LEFT JOIN cultural.gastronomia_tradicional gt       ON gt.comunidad_id = com.id
-GROUP BY mun.nombre, com.nombre, com.tipo
-ORDER BY total_saberes DESC;
+CREATE TABLE IF NOT EXISTS cultural.sesion_entrevista (
+    id                      SERIAL PRIMARY KEY,
 
--- Vista: riesgo de pérdida cultural por productor
-CREATE VIEW cultural.v_riesgo_perdida_cultural AS
-SELECT
-    p.nombres || ' ' || COALESCE(p.apellido_paterno,'') AS productor,
-    mun.nombre      AS municipio,
-    ic.se_identifica_etnia,
-    ic.etnia_nombre,
-    ic.habla_lengua_originaria,
-    ic.maiz_es_parte_identidad,
-    ic.se_siente_guardian_semillas,
-    ic.percibe_perdida_cultura_maiz,
-    tc.percibe_riesgo_perdida,
-    tc.nivel_riesgo_percibido,
-    tc.hay_barreras,
-    tc.barrera_migracion_jovenes,
-    tc.barrera_perdida_lengua,
-    tc.transmite_a_hijos,
-    tc.transmite_a_jovenes,
-    (CASE WHEN ic.percibe_perdida_cultura_maiz THEN 2 ELSE 0 END +
-     CASE WHEN tc.percibe_riesgo_perdida THEN 2 ELSE 0 END +
-     CASE WHEN tc.barrera_migracion_jovenes THEN 1 ELSE 0 END +
-     CASE WHEN tc.barrera_perdida_lengua THEN 1 ELSE 0 END +
-     CASE WHEN NOT ic.habla_lengua_originaria THEN 1 ELSE 0 END +
-     CASE WHEN NOT tc.transmite_a_hijos THEN 1 ELSE 0 END
-    ) AS score_riesgo_cultural
-FROM social.productor p
-LEFT JOIN catalogo.municipio mun                    ON mun.id = p.municipio_id
-LEFT JOIN cultural.identidad_cultural ic            ON ic.productor_id = p.id
-LEFT JOIN cultural.transmision_conocimiento tc      ON tc.productor_id = p.id
-ORDER BY score_riesgo_cultural DESC;
+    -- Vínculo con el productor (código capturado en grp_vinculo de F5)
+    productor_id            INTEGER REFERENCES social.productor(id),
+    codigo_productor        VARCHAR(20),    -- HP-2025-001, para validación cruzada con F1
 
--- Vista: patrimonio gastronómico por variedad de maíz
-CREATE VIEW cultural.v_gastronomia_variedad AS
-SELECT
-    gt.variedad_maiz_preferida,
-    gt.color_grano_preferido,
-    COUNT(DISTINCT gt.id)           AS total_platillos,
-    COUNT(DISTINCT gt.comunidad_id) AS comunidades_que_lo_usan,
-    STRING_AGG(DISTINCT gt.nombre_platillo, ', ') AS platillos,
-    SUM(CASE WHEN gt.vinculo_ritual THEN 1 ELSE 0 END) AS platillos_rituales,
-    SUM(CASE WHEN gt.esta_vigente THEN 1 ELSE 0 END)   AS platillos_vigentes
-FROM cultural.gastronomia_tradicional gt
-WHERE gt.variedad_maiz_preferida IS NOT NULL
-GROUP BY gt.variedad_maiz_preferida, gt.color_grano_preferido
-ORDER BY total_platillos DESC;
+    -- Metadatos de la visita
+    fecha_registro          DATE DEFAULT CURRENT_DATE,
+    registrador             VARCHAR(150),
+    municipio_id            INTEGER REFERENCES catalogo.municipio(id),
+    comunidad_id            INTEGER REFERENCES catalogo.comunidad(id),
+    comunidad_texto         VARCHAR(200),   -- si no está catalogada aún
+    lengua_entrevista       VARCHAR(30) CHECK (lengua_entrevista IN (
+                                'teenek','nahuatl','pame','español','otra'
+                            )),
 
--- Vista integrada: germoplasma con su riqueza cultural
-CREATE VIEW cultural.v_germoplasma_cultural AS
-SELECT
-    nlo.germoplasma_id,
-    l.nombre            AS lengua,
-    nlo.nombre          AS nombre_originario,
-    nlo.significado_literal,
-    nlo.significado_cultural,
-    com.nombre          AS comunidad_origen,
-    mun.nombre          AS municipio,
-    (SELECT COUNT(*) FROM cultural.gastronomia_tradicional gt
-     WHERE gt.variedad_maiz_preferida ILIKE '%' || nlo.nombre || '%') AS platillos_asociados
-FROM cultural.nombre_lengua_originaria nlo
-JOIN catalogo.lengua l              ON l.id = nlo.lengua_id
-LEFT JOIN catalogo.comunidad com    ON com.id = nlo.comunidad_id
-LEFT JOIN catalogo.municipio mun    ON mun.id = com.municipio_id;
+    -- Geolocalización del lugar de la entrevista
+    -- (campo geopoint_entrevista del grp_cierre en F5)
+    latitud                 DECIMAL(10,7) CHECK (latitud IS NULL OR latitud BETWEEN 20.0 AND 23.0),
+    longitud                DECIMAL(10,7) CHECK (longitud IS NULL OR longitud BETWEEN -100.5 AND -97.5),
+    altitud_m               DECIMAL(8,2),
+    precision_gps_m         DECIMAL(6,2),
+
+    -- Validación geográfica (Huasteca Potosina)
+    CONSTRAINT chk_lat_cultural CHECK (latitud  BETWEEN 20.0 AND 23.0),
+    CONSTRAINT chk_lon_cultural CHECK (longitud BETWEEN -100.5 AND -97.5),
+
+    -- Calidad y cierre de la sesión
+    duracion_min            SMALLINT CHECK (duracion_min IS NULL OR (duracion_min > 0 AND duracion_min < 300)),
+    productor_satisfecho    BOOLEAN,
+    temas_pendientes        TEXT,       -- lista de temas no cubiertos
+    notas_etnograficas      TEXT,       -- observaciones del entrevistador
+
+    -- Trazabilidad KoboToolbox
+    uuid_envio              VARCHAR(100) UNIQUE,
+    deviceid                VARCHAR(100),
+    fecha_inicio_kobo       TIMESTAMP,  -- campo start de KoboToolbox
+    fecha_fin_kobo          TIMESTAMP,  -- campo end de KoboToolbox
+
+    created_at              TIMESTAMP DEFAULT NOW(),
+    updated_at              TIMESTAMP DEFAULT NOW()
+);

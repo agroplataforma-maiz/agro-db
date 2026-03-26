@@ -1,7 +1,7 @@
 # ============================================================
 # AGROPLATAFORMA DIGITAL - MAIZ NATIVO HUASTECA POTOSINA
 # PEE-2025-G-369 | TecNM Ciudad Valles
-# Docker Compose v3.0 - 7 esquemas + catalogo territorial
+# Docker Compose v3.0 - 6 esquemas + catalogos
 # ============================================================
 
 services:
@@ -19,14 +19,16 @@ services:
       - ./db/01_maestro.sql:/docker-entrypoint-initdb.d/01_maestro.sql
       - ./db/02_catalogo.sql:/docker-entrypoint-initdb.d/02_catalogo.sql
       - ./db/03_social.sql:/docker-entrypoint-initdb.d/03_social.sql
-      - ./db/04_cultural.sql:/docker-entrypoint-initdb.d/04_cultural.sql
-      - ./db/05_geografico.sql:/docker-entrypoint-initdb.d/05_geografico.sql
-      - ./db/06_ambiental.sql:/docker-entrypoint-initdb.d/06_ambiental.sql
-      - ./db/07_agronomico.sql:/docker-entrypoint-initdb.d/07_agronomico.sql
-      - ./db/08_fenotipico.sql:/docker-entrypoint-initdb.d/08_fenotipico.sql
-      - ./db/09_vistas.sql:/docker-entrypoint-initdb.d/09_vistas.sql
-      - ./db/10_datos_base.sql:/docker-entrypoint-initdb.d/10_datos_base.sql
-      - ./db/11_localidades_colonias.sql:/docker-entrypoint-initdb.d/11_localidades_colonias.sql
+      - ./db/04_geografico.sql:/docker-entrypoint-initdb.d/04_geografico.sql
+      - ./db/05_agronomico.sql:/docker-entrypoint-initdb.d/05_agronomico.sql
+      - ./db/06_cultural.sql:/docker-entrypoint-initdb.d/06_cultural.sql
+      - ./db/07_fenotipico.sql:/docker-entrypoint-initdb.d/07_fenotipico.sql
+      - ./db/08_ambiental.sql:/docker-entrypoint-initdb.d/08_ambiental.sql
+      - ./db/09_indices.sql:/docker-entrypoint-initdb.d/09_indices.sql
+      - ./db/10_triggers.sql:/docker-entrypoint-initdb.d/10_triggers.sql
+      - ./db/11_vistas.sql:/docker-entrypoint-initdb.d/11_vistas.sql
+      - ./db/12_datos_base.sql:/docker-entrypoint-initdb.d/12_datos_base.sql
+      - ./db/13_localidades_colonias.sql:/docker-entrypoint-initdb.d/13_localidades_colonias.sql
       - ./backups:/backups
     ports:
       - "5432:5432"
