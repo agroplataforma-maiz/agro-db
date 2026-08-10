@@ -11,68 +11,48 @@ SET search_path TO fenotipico, public;
 -- Evaluación fenotípica completa (22 variables Anexo I)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS fenotipico.evaluacion_fenotipica (
-    id                              SERIAL PRIMARY KEY,
-    cultivo_id                      INTEGER NOT NULL REFERENCES agronomico.cultivo(id) ON DELETE RESTRICT ON UPDATE CASCADE,   -- FK a agronomico.cultivo
-    comunidad_id                    INTEGER REFERENCES catalogo.comunidad(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    fecha_evaluacion                DATE NOT NULL,
-    evaluador                       VARCHAR(150),
-
-    etapa_fenologica_id           INTEGER REFERENCES catalogo.etapa_fenologica(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    -- === VARIABLES DE MAZORCA (11 variables) ===
-    tamanio_mazorca_cm               DECIMAL(6,2),
-    diametro_mazorca_cm             DECIMAL(6,2),
-    num_hileras                     SMALLINT CHECK (num_hileras >= 0),
-    num_granos_por_hilera           SMALLINT CHECK (num_granos_por_hilera >= 0),
-    peso_50_semillas_g              DECIMAL(6,2) CHECK (peso_50_semillas_g >= 0),
-    color_grano                     VARCHAR(100),
-    grosor_grano_mm                 DECIMAL(6,2),   -- promedio 50 granos
-    ancho_grano_mm                  DECIMAL(6,2),   -- AGR
-    longitud_grano_mm               DECIMAL(6,2),   -- LGR
-    indice_lgr_agr                  DECIMAL(6,4) GENERATED ALWAYS AS (
-                                        CASE WHEN ancho_grano_mm > 0
-                                        THEN longitud_grano_mm / ancho_grano_mm
-                                        ELSE NULL END
-                                    ) STORED,
-    volumen_50_semillas_ml          DECIMAL(6,2),
-
-    -- === VARIABLES DE PLANTA (11 variables) ===
-    altura_planta_cm                DECIMAL(7,2) CHECK (altura_planta_cm >= 0),   -- APL
-    altura_mazorca_cm               DECIMAL(7,2) CHECK (altura_mazorca_cm >= 0),   -- AMZ
-    indice_apl_amz                  DECIMAL(6,4) GENERATED ALWAYS AS (
-                                        CASE WHEN altura_mazorca_cm > 0
-                                        THEN altura_planta_cm / altura_mazorca_cm
-                                        ELSE NULL END
-                                    ) STORED,
-    num_hojas                       SMALLINT CHECK (num_hojas >= 0),
-    hojas_arriba_mazorca            SMALLINT CHECK (hojas_arriba_mazorca >= 0),
-    dias_floracion_masculina        SMALLINT CHECK (dias_floracion_masculina >= 0),
-    dias_floracion_femenina         SMALLINT CHECK (dias_floracion_femenina >= 0),
-    asincronia_floral               SMALLINT GENERATED ALWAYS AS (
-                                        ABS(COALESCE(dias_floracion_masculina,0) -
-                                            COALESCE(dias_floracion_femenina,0))
-                                    ) STORED,
-    longitud_espiga_cm              DECIMAL(6,2),
-    longitud_rama_central_cm        DECIMAL(6,2),
-    num_ramificaciones_primarias    SMALLINT CHECK (num_ramificaciones_primarias >= 0),
-
-    -- === VARIABLES SANITARIAS ===
-    presencia_plaga                 BOOLEAN CHECK (presencia_plaga = FALSE OR tipo_plaga IS NOT NULL),
-    tipo_plaga                      VARCHAR(200),
-    severidad_plaga                 VARCHAR(20) CHECK (severidad_plaga IN ('baja','media','alta','muy_alta')),
-    presencia_enfermedad            BOOLEAN CHECK (presencia_enfermedad = FALSE OR tipo_enfermedad IS NOT NULL),
-    tipo_enfermedad                 VARCHAR(200),
-    severidad_enfermedad            VARCHAR(20) CHECK (severidad_enfermedad IN ('baja','media','alta','muy_alta')),
-    obs_sanitarias_detalle          TEXT,
-    notas_evaluacion                TEXT,
-    -- === AGRONÓMICAS ADICIONALES ===
-    rendimiento_estimado_kg         DECIMAL(10,2) CHECK (rendimiento_estimado_kg >= 0),
-    notas_campo                     TEXT,
-    created_at                      TIMESTAMP DEFAULT NOW(),
-    updated_at                      TIMESTAMP DEFAULT NOW()
+    id               SERIAL PRIMARY KEY,
+    variedad_id      INTEGER NOT NULL REFERENCES agro.variedades(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    ciclo_eval       VARCHAR(20) NOT NULL,        -- 'OI-2024', 'PV-2024'
+    anio_eval        SMALLINT NOT NULL,
+    comunidad_id     INTEGER REFERENCES core.comunidad(id) ON DELETE SET NULL ON UPDATE CASCADE, -- localidad normalizada
+    evaluador_id     INTEGER REFERENCES sistema.usuarios(id) ON DELETE SET NULL ON UPDATE CASCADE,      -- evaluador normalizado
+    etapa_bbch_max   INTEGER REFERENCES catalogo.etapa_fenologica(id) ON DELETE SET NULL ON UPDATE CASCADE, -- última etapa alcanzada
+    completitud_pct  NUMERIC(5,2) DEFAULT 0.00,  -- 0-100, calculado por trigger
+    observaciones    TEXT,
+    created_at      TIMESTAMP DEFAULT NOW(),
+    updated_at      TIMESTAMP DEFAULT NOW(),
+    UNIQUE(variedad_id, ciclo_eval, comunidad_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_eval_cultivo ON fenotipico.evaluacion_fenotipica(cultivo_id);
+CREATE INDEX IF NOT EXISTS idx_eval_comunidad ON fenotipico.evaluacion_fenotipica(comunidad_id);
+CREATE INDEX IF NOT EXISTS idx_evidencia_evaluacion ON fenotipico.evidencia(evaluacion_id);
+
+CREATE INDEX ix_ef_variedad  ON fenotipico.evaluacion_fenotipica(variedad_id);
+CREATE INDEX ix_ef_ciclo     ON fenotipico.evaluacion_fenotipica(ciclo_eval, año_eval);
+CREATE INDEX ix_vf_eval      ON fenotipico.valores_fenotipicos(evaluacion_id);
+CREATE INDEX ix_vf_desc      ON fenotipico.valores_fenotipicos(descriptor_id);
+
+
+CREATE TABLE IF NOT EXISTS fenotipico.valores_fenotipicos (
+    id               SERIAL          PRIMARY KEY,
+    evaluacion_id    INTEGER         NOT NULL REFERENCES fenotipico.evaluacion_fenotipica(id) ON DELETE CASCADE,
+    descriptor_id    SMALLINT        NOT NULL REFERENCES catalogo.descriptores_catalogo(id),
+    valor_texto      VARCHAR(120),   -- para QL, PQ: "3. Débil"
+    valor_numerico   NUMERIC(8,3),   -- para QN medibles: 68 (días), 4.2 (cm)
+    valor_codigo     SMALLINT,       -- código numérico de la opción (1,3,5,7,9)
+    created_at      TIMESTAMP DEFAULT NOW(),
+    updated_at      TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT uq_eval_desc UNIQUE(evaluacion_id, descriptor_id),
+    CONSTRAINT ck_valor CHECK (
+        valor_texto IS NOT NULL OR valor_numerico IS NOT NULL
+    )
+);
+
+
 -- ============================================================
--- 2. EVIDENCIA MULTIMEDIA
+-- 3. EVIDENCIA MULTIMEDIA
 -- Evidencia multimedia
 -- ============================================================
 CREATE TABLE IF NOT EXISTS fenotipico.evidencia (
@@ -104,12 +84,15 @@ CREATE TABLE IF NOT EXISTS fenotipico.evidencia (
     updated_at      TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_evidencia_eval ON fenotipico.evidencia(evaluacion_id);
+
+
 -- ============================================================
 -- ANÁLISIS NUTRIMENTAL (Etapa 2 - 30 muestras mínimo)
 -- ============================================================
 
 -- ============================================================
--- 3. MUESTRA NUTRIMENTAL
+-- 4. MUESTRA NUTRIMENTAL
 -- Muestra de maíz para análisis
 -- ============================================================
 CREATE TABLE IF NOT EXISTS fenotipico.muestra_nutrimental (
@@ -129,8 +112,10 @@ CREATE TABLE IF NOT EXISTS fenotipico.muestra_nutrimental (
     updated_at          TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_muestra_germoplasma ON fenotipico.muestra_nutrimental(germoplasma_id);
+
 -- ============================================================
--- 4. RESULTADO NUTRIMENTAL
+-- 5. RESULTADO NUTRIMENTAL
 -- Resultados del análisis nutrimental
 -- ============================================================
 CREATE TABLE IF NOT EXISTS fenotipico.resultado_nutrimental (
@@ -185,3 +170,4 @@ CREATE TABLE IF NOT EXISTS fenotipico.resultado_nutrimental (
     updated_at                  TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_resultado_muestra ON fenotipico.resultado_nutrimental(muestra_id);

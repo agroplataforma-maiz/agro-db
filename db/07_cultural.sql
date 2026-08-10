@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS cultural.saber_tradicional (
     updated_at                  TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_saber_comunidad ON cultural.saber_tradicional(comunidad_id);
+
+CREATE INDEX IF NOT EXISTS idx_saber_productor ON cultural.saber_tradicional(productor_id);
+
 -- ============================================================
 -- 2. RITUAL Y CEREMONIA AGRÍCOLA
 --    Prácticas rituales vinculadas al ciclo del maíz
@@ -111,6 +115,8 @@ CREATE TABLE IF NOT EXISTS cultural.ritual_agricola (
     created_at                  TIMESTAMP DEFAULT NOW(),
     updated_at                  TIMESTAMP DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_ritual_comunidad ON cultural.ritual_agricola(comunidad_id);
 
 -- Productores que conocen o participan en el ritual (N:M)
 CREATE TABLE IF NOT EXISTS cultural.ritual_productor (
@@ -165,6 +171,9 @@ CREATE TABLE IF NOT EXISTS cultural.narrativa_oral (
     created_at                  TIMESTAMP DEFAULT NOW(),
     updated_at                  TIMESTAMP DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_narrativa_comunidad ON cultural.narrativa_oral(comunidad_id);
+CREATE INDEX IF NOT EXISTS idx_narrativa_productor ON cultural.narrativa_oral(productor_id);
 
 -- ============================================================
 -- 4. GASTRONOMÍA TRADICIONAL
@@ -277,6 +286,8 @@ CREATE TABLE IF NOT EXISTS cultural.transmision_conocimiento (
     updated_at                      TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_transmision_productor ON cultural.transmision_conocimiento(productor_id);
+
 -- ============================================================
 -- 6. IDENTIDAD CULTURAL
 --    Vínculo del productor con el maíz como elemento identitario
@@ -324,6 +335,8 @@ CREATE TABLE IF NOT EXISTS cultural.identidad_cultural (
     updated_at                      TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_identidad_productor ON cultural.identidad_cultural(productor_id);
+
 -- ============================================================
 -- 7. NOMBRE EN LENGUA ORIGINARIA 
 --    Registro lingüístico de los nombres nativos del maíz
@@ -331,9 +344,9 @@ CREATE TABLE IF NOT EXISTS cultural.identidad_cultural (
 
 CREATE TABLE IF NOT EXISTS cultural.nombre_lengua_originaria (
     id                      SERIAL PRIMARY KEY,
-    germoplasma_id          INTEGER REFERENCES agronomico.germoplasma(id),    -- FK a agronomico.germoplasma
+    germoplasma_id          INTEGER REFERENCES core.germoplasma(id),    -- FK a core.germoplasma
     lengua_id               INTEGER REFERENCES catalogo.lengua(id),    -- FK a catalogo.lengua
-    comunidad_id            INTEGER REFERENCES catalogo.comunidad(id),    -- FK a catalogo.comunidad
+    comunidad_id            INTEGER REFERENCES core.comunidad(id),    -- FK a core.comunidad
 
     -- Nombre
     nombre                  VARCHAR(300) NOT NULL,
@@ -350,7 +363,7 @@ CREATE TABLE IF NOT EXISTS cultural.nombre_lengua_originaria (
     variantes               TEXT,   -- otros nombres en la misma lengua
 
     -- Fuente
-    informante_id           INTEGER REFERENCES social.productor(id),    -- FK a social.productor
+    informante_id           INTEGER REFERENCES core.productor(id),    -- FK a core.productor
     es_nombre_vigente       BOOLEAN DEFAULT TRUE,
     notas_linguisticas      TEXT,
 
@@ -361,6 +374,8 @@ CREATE TABLE IF NOT EXISTS cultural.nombre_lengua_originaria (
 
     UNIQUE (germoplasma_id, lengua_id, nombre)
 );
+
+CREATE INDEX IF NOT EXISTS idx_nombre_lengua_germoplasma ON cultural.nombre_lengua_originaria(germoplasma_id);
 
 -- ============================================================
 -- 8. MEDIO CULTURAL
@@ -470,3 +485,53 @@ CREATE TABLE IF NOT EXISTS cultural.sesion_entrevista (
     created_at              TIMESTAMP DEFAULT NOW(),
     updated_at              TIMESTAMP DEFAULT NOW()
 );
+
+-- ============================================================
+-- PENDIENTE: TABLA DE USOS DEL MAÍZ COSECHADO
+-- Esta tabla documenta los diferentes usos que los productores le dan al maíz cosechado, incluyendo la distribución porcentual entre autoconsumo, venta, semilla, forraje u otros destinos, así como la motivación detrás de cada uso, los alimentos elaborados a partir del maíz cosechado, el sistema de cultivo utilizado y los canales de comercialización. Esta información es clave para entender la importancia socioeconómica del maíz nativo en la región y para diseñar estrategias de apoyo a los productores que promuevan la conservación y el uso sostenible de su germoplasma.
+-- 10. USOS DEL MAÍZ COSECHADO
+-- Esta tabla documenta los diferentes usos que los productores le dan al maíz cosechado, incluyendo la distribución porcentual entre autoconsumo, venta, semilla, forraje u otros destinos, así como la motivación detrás de cada uso, los alimentos elaborados a partir del maíz cosechado, el sistema de cultivo utilizado y los canales de comercialización. Esta información es clave para entender la importancia socioeconómica del maíz nativo en la región y para diseñar estrategias de apoyo a los productores que promuevan la conservación y el uso sostenible de su germoplasma.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS cultural.uso_maiz (
+    id                      SERIAL PRIMARY KEY,
+    cultivo_id              INTEGER NOT NULL REFERENCES agronomico.cultivo(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    -- Distribución porcentual
+    pct_autoconsumo         SMALLINT CHECK (pct_autoconsumo BETWEEN 0 AND 100),
+    pct_venta               SMALLINT CHECK (pct_venta BETWEEN 0 AND 100),
+    pct_semilla             SMALLINT CHECK (pct_semilla BETWEEN 0 AND 100),
+    pct_forraje             SMALLINT CHECK (pct_forraje BETWEEN 0 AND 100),
+    pct_otro                SMALLINT CHECK (pct_otro BETWEEN 0 AND 100),
+    uso_otro_descripcion    VARCHAR(200),
+    CONSTRAINT chk_uso_maiz_pct_sum CHECK ((COALESCE(pct_autoconsumo,0) + COALESCE(pct_venta,0) + COALESCE(pct_semilla,0) + COALESCE(pct_forraje,0) + COALESCE(pct_otro,0)) <= 100),
+    -- Motivación para sembrar
+    motivo_autoconsumo      BOOLEAN DEFAULT FALSE,
+    motivo_venta            BOOLEAN DEFAULT FALSE,
+    motivo_tradicion        BOOLEAN DEFAULT FALSE,
+    motivo_forraje          BOOLEAN DEFAULT FALSE,
+    motivo_semilla          BOOLEAN DEFAULT FALSE,
+    motivo_otro             VARCHAR(150),
+    -- Alimentos elaborados
+    elabora_tortilla        BOOLEAN DEFAULT FALSE,
+    elabora_tamales         BOOLEAN DEFAULT FALSE,
+    elabora_atole           BOOLEAN DEFAULT FALSE,
+    elabora_pozole          BOOLEAN DEFAULT FALSE,
+    elabora_otros           VARCHAR(200),
+    -- Sistema de cultivo
+    sistema_cultivo_id      INTEGER REFERENCES catalogo.sistema_cultivo(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    -- Comercialización
+    canal_tienda_local      BOOLEAN DEFAULT FALSE,
+    canal_mercado_tianguis  BOOLEAN DEFAULT FALSE,
+    canal_tortilleria       BOOLEAN DEFAULT FALSE,
+    canal_central_abastos   BOOLEAN DEFAULT FALSE,
+    canal_venta_directa     BOOLEAN DEFAULT FALSE,
+    canal_intermediario     BOOLEAN DEFAULT FALSE,
+    canal_otro              VARCHAR(100),
+    precio_kg               DECIMAL(8,2),
+    epoca_venta             VARCHAR(100),
+    produccion_total_kg     DECIMAL(10,2) CHECK (produccion_total_kg >= 0),
+    fecha_registro          DATE DEFAULT CURRENT_DATE,
+    created_at              TIMESTAMP DEFAULT NOW(),
+    updated_at              TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_uso_maiz_cultivo ON cultural.uso_maiz(cultivo_id);

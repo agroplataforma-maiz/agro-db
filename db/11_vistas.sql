@@ -143,7 +143,7 @@ LEFT JOIN catalogo.municipio mun ON mun.id = com.municipio_id
 LEFT JOIN agronomico.cultivo c ON c.germoplasma_id = g.id;
 
 -- Vista: sistema de semillas y productores
-CREATE VIEW agronomico.v_sistema_semilla AS
+CREATE VIEW social.v_sistema_semilla AS
 SELECT
     ss.id,
     p.id AS productor_id,
@@ -159,7 +159,7 @@ SELECT
     ss.ventaja_alto_rendimiento,
     ss.ventaja_resistencia_sequia,
     ss.ventaja_resistencia_plagas
-FROM agronomico.sistema_semilla ss
+FROM social.sistema_semilla ss
 LEFT JOIN social.productor p ON p.id = ss.productor_id
 LEFT JOIN agronomico.germoplasma g ON g.id = ss.germoplasma_id;
 
@@ -180,13 +180,13 @@ SELECT
     u.canal_venta_directa,
     rm.nombre AS raza,
     cg.nombre AS color_grano
-FROM agronomico.uso_maiz u
+FROM cultural.uso_maiz u
 LEFT JOIN agronomico.cultivo c ON c.id = u.cultivo_id
 LEFT JOIN agronomico.germoplasma g ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id;
 
-CREATE VIEW agronomico.v_economia_cultivo AS
+CREATE VIEW social.v_economia_cultivo AS
 SELECT
     e.id,
     e.cultivo_id,
@@ -200,7 +200,7 @@ SELECT
     e.problema_precio,
     rm.nombre AS raza,
     cg.nombre AS color_grano
-FROM agronomico.economia_cultivo e
+FROM social.economia_cultivo e
 LEFT JOIN agronomico.cultivo c ON c.id = e.cultivo_id
 LEFT JOIN agronomico.germoplasma g ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
@@ -235,8 +235,8 @@ LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
 LEFT JOIN catalogo.estado_conservacion ec ON ec.id = g.estado_conservacion_id
 LEFT JOIN catalogo.comunidad com ON com.id = g.comunidad_id
 LEFT JOIN catalogo.municipio mun ON mun.id = com.municipio_id
-LEFT JOIN agronomico.uso_maiz u ON u.cultivo_id = c.id
-LEFT JOIN agronomico.economia_cultivo e ON e.cultivo_id = c.id;
+LEFT JOIN cultural.uso_maiz u ON u.cultivo_id = c.id
+LEFT JOIN social.economia_cultivo e ON e.cultivo_id = c.id;
 
 -- ============================================================
 -- VISTA MAESTRA: germoplasma con todos los ejes
@@ -1023,3 +1023,100 @@ LEFT JOIN geografico.observacion_campo  oc  ON oc.parcela_id = par.id
 LEFT JOIN geografico.historial_parcela  hp  ON hp.parcela_id = par.id
 LEFT JOIN ambiental.condicion_edafica   ce  ON ce.parcela_id = par.id
 ORDER BY mun.nombre, com.nombre, par.nombre;
+
+-- ═══════════════════════════════════════════════════════
+--  VISTAS Y FUNCIONES ÚTILES
+-- ═══════════════════════════════════════════════════════
+
+-- Vista: resumen completo por variedad (une fenotípico + agronómico)
+CREATE OR REPLACE VIEW v_variedades_resumen AS
+SELECT
+    v.id,
+    v.nombre,
+    v.tipo_variedad,
+    v.obtentor,
+    -- fenotípico
+    ef.id           AS eval_feno_id,
+    ef.ciclo_eval,
+    ef.año_eval,
+    ef.completitud_pct,
+    ef.localidad,
+    -- agronómico
+    ra.id           AS reg_agron_id,
+    ra.dias_floracion_masc,
+    ra.dias_floracion_fem,
+    ra.intervalo_ase,
+    ra.zona_adapt_ppal,
+    ra.regimen_hid,
+    -- espacial: coordenadas del primer punto registrado
+    ST_Y(pe.ubicacion::geometry)  AS latitud,
+    ST_X(pe.ubicacion::geometry)  AS longitud,
+    pe.municipio,
+    pe.altitud_msnm
+FROM variedades v
+LEFT JOIN evaluaciones_fenotipicas ef ON ef.variedad_id = v.id
+LEFT JOIN registros_agronomicos    ra ON ra.variedad_id = v.id
+LEFT JOIN LATERAL (
+    SELECT * FROM parcelas_evaluacion
+    WHERE registro_agron_id = ra.id
+    LIMIT 1
+) pe ON TRUE
+WHERE v.activo = TRUE;
+
+
+-- Vista: valores fenotípicos en formato tabular ancho (pivot)
+-- (útil para exportar / comparar variedades)
+CREATE OR REPLACE VIEW v_evaluacion_detalle AS
+SELECT
+    ef.id AS evaluacion_id,
+    v.nombre,
+    ef.ciclo_eval,
+    ef.año_eval,
+    dc.id           AS descriptor_id,
+    dc.modulo,
+    dc.etapa_bbch,
+    dc.label_es,
+    dc.tipo_desc,
+    vf.valor_texto,
+    vf.valor_numerico,
+    vf.valor_codigo
+FROM evaluaciones_fenotipicas ef
+JOIN variedades v               ON v.id = ef.variedad_id
+JOIN valores_fenotipicos vf     ON vf.evaluacion_id = ef.id
+JOIN descriptores_catalogo dc   ON dc.id = vf.descriptor_id
+ORDER BY ef.id, dc.id;
+
+
+-- Función PostGIS: variedades evaluadas en radio de X km desde un punto
+CREATE OR REPLACE FUNCTION variedades_en_radio(
+    lat      DOUBLE PRECISION,
+    lng      DOUBLE PRECISION,
+    radio_km DOUBLE PRECISION
+) RETURNS TABLE(
+    variedad_id  INT,
+    nombre       TEXT,
+    distancia_km NUMERIC,
+    municipio    TEXT
+) AS $$
+SELECT DISTINCT ON(v.id)
+    v.id,
+    v.nombre,
+    ROUND(ST_Distance(
+        pe.ubicacion,
+        ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
+    ) / 1000.0, 2),
+    pe.municipio
+FROM parcelas_evaluacion pe
+JOIN registros_agronomicos ra ON ra.id = pe.registro_agron_id
+JOIN variedades v             ON v.id = ra.variedad_id
+WHERE
+    ST_DWithin(
+        pe.ubicacion,
+        ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
+        radio_km * 1000
+    )
+    AND v.activo = TRUE
+ORDER BY v.id, distancia_km;
+$$ LANGUAGE SQL STABLE;
+
+-- Uso: SELECT * FROM variedades_en_radio(21.85, -98.95, 50);

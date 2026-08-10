@@ -16,19 +16,20 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-huasteca2025}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/01_maestro.sql:/docker-entrypoint-initdb.d/01_maestro.sql
+      - ./db/00_maestro.sql:/docker-entrypoint-initdb.d/00_maestro.sql
+      - ./db/01_sistema.sql:/docker-entrypoint-initdb.d/01_sistema.sql
       - ./db/02_catalogo.sql:/docker-entrypoint-initdb.d/02_catalogo.sql
-      - ./db/03_social.sql:/docker-entrypoint-initdb.d/03_social.sql
-      - ./db/04_geografico.sql:/docker-entrypoint-initdb.d/04_geografico.sql
-      - ./db/05_agronomico.sql:/docker-entrypoint-initdb.d/05_agronomico.sql
-      - ./db/06_cultural.sql:/docker-entrypoint-initdb.d/06_cultural.sql
-      - ./db/07_fenotipico.sql:/docker-entrypoint-initdb.d/07_fenotipico.sql
-      - ./db/08_ambiental.sql:/docker-entrypoint-initdb.d/08_ambiental.sql
-      - ./db/09_indices.sql:/docker-entrypoint-initdb.d/09_indices.sql
-      - ./db/10_triggers.sql:/docker-entrypoint-initdb.d/10_triggers.sql
-      - ./db/11_vistas.sql:/docker-entrypoint-initdb.d/11_vistas.sql
-      - ./db/12_datos_base.sql:/docker-entrypoint-initdb.d/12_datos_base.sql
-      - ./db/13_localidades_colonias.sql:/docker-entrypoint-initdb.d/13_localidades_colonias.sql
+      - ./db/03_trazabilidad.sql:/docker-entrypoint-initdb.d/03_trazabilidad.sql
+      - ./db/04_core.sql:/docker-entrypoint-initdb.d/04_core.sql
+      #- ./db/05_geografico.sql:/docker-entrypoint-initdb.d/05_geografico.sql
+      #- ./db/06_social.sql:/docker-entrypoint-initdb.d/06_social.sql
+      #- ./db/07_cultural.sql:/docker-entrypoint-initdb.d/07_cultural.sql
+      #- ./db/08_agronomico.sql:/docker-entrypoint-initdb.d/08_agronomico.sql
+      #- ./db/10_ambiental.sql:/docker-entrypoint-initdb.d/10_ambiental.sql
+      #- ./db/10_triggers.sql:/docker-entrypoint-initdb.d/10_triggers.sql
+      #- ./db/11_vistas.sql:/docker-entrypoint-initdb.d/11_vistas.sql
+      #- ./db/12_datos_base.sql:/docker-entrypoint-initdb.d/12_datos_base.sql
+      #- ./db/13_localidades_colonias.sql:/docker-entrypoint-initdb.d/13_localidades_colonias.sql
       - ./backups:/backups
     ports:
       - "5432:5432"

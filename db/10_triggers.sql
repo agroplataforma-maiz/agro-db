@@ -5,6 +5,7 @@
 
 -- Este archivo contiene triggers para mantener la integridad de los datos y automatizar tareas comunes, como actualizar timestamps o generar geometrías a partir de latitud/longitud.
 
+
 -- ============================================================
 -- TRIGGER: Derivar municipio desde localidad (evita redundancia)
 -- ============================================================
@@ -43,6 +44,31 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Trigger: recalcular completitud después de cada INSERT/UPDATE en valores_fenotipicos
+CREATE OR REPLACE FUNCTION recalcular_completitud() RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE fenotipico.evaluacion_fenotipica
+    SET completitud_pct = (
+        SELECT ROUND(
+            COUNT(vf.id) * 100.0 /
+            -- total descriptores fenotípicos del catálogo (D1-D24 + D26-D63 = 62)
+            (SELECT COUNT(*) FROM catalogo.descriptores_catalogo WHERE modulo = 'fenotipico'),
+            2
+        )
+        FROM fenotipico.valores_fenotipicos vf
+        WHERE vf.evaluacion_id = NEW.evaluacion_id
+          AND (vf.valor_texto IS NOT NULL AND vf.valor_texto != ''
+               OR vf.valor_numerico IS NOT NULL)
+    )
+    WHERE id = NEW.evaluacion_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_completitud
+AFTER INSERT OR UPDATE ON fenotipico.valores_fenotipicos
+FOR EACH ROW EXECUTE FUNCTION recalcular_completitud();
 
 -- UBICACION
 CREATE TRIGGER trg_ubicacion_geom
@@ -168,22 +194,25 @@ EXECUTE FUNCTION public.set_updated_at();
 
 -- SISTEMA DE SEMILLA
 CREATE TRIGGER trg_sistema_semilla_updated_at
-BEFORE UPDATE ON agronomico.sistema_semilla
+BEFORE UPDATE ON social.sistema_semilla
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- USO DEL MAIZ COSECHADO
 CREATE TRIGGER trg_uso_maiz_updated_at
-BEFORE UPDATE ON agronomico.uso_maiz
+BEFORE UPDATE ON cultural.uso_maiz
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- ECONOMIA DEL CULTIVO
 CREATE TRIGGER trg_economia_cultivo_updated_at
-BEFORE UPDATE ON agronomico.economia_cultivo
+BEFORE UPDATE ON social.economia_cultivo
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
+CREATE TRIGGER trg_variedades_updated_at
+BEFORE UPDATE ON catalogo.variedades
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ============================================================
 -- FUNCIÓN AUXILIAR: parsear geopoint de KoboToolbox
@@ -361,3 +390,84 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_validar_geom
 BEFORE INSERT OR UPDATE ON geografico.ubicacion
 FOR EACH ROW EXECUTE FUNCTION geografico.fn_validar_geom();
+
+-- Variedades evaluadas en radio de X km desde un punto dado
+CREATE OR REPLACE FUNCTION geografico.variedades_en_radio(
+    lat       DOUBLE PRECISION,
+    lng       DOUBLE PRECISION,
+    radio_km  DOUBLE PRECISION
+) RETURNS TABLE(
+    parcela_id      INT,
+    nombre_parcela  TEXT,
+    variedad_id     INT,
+    nombre_variedad TEXT,
+    distancia_km    NUMERIC,
+    municipio       TEXT,
+    altitud_msnm    SMALLINT,
+    ciclo           TEXT,
+    zona_adapt_ppal TEXT
+) AS $$
+SELECT DISTINCT ON (p.id)
+    p.id,
+    p.nombre::TEXT,
+    v.id,
+    v.nombre::TEXT,
+    ROUND(ST_Distance(
+        p.poligono::geography,
+        ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
+    ) / 1000.0, 2) AS distancia_km,
+    m.nombre::TEXT,
+    u.altitud_m,
+    c.ciclo::TEXT,
+    c.zona_adapt_ppal::TEXT
+FROM geografico.parcela p
+LEFT JOIN social.productor pr    ON pr.id = p.productor_id
+LEFT JOIN catalogo.municipio m   ON m.id = pr.municipio_id
+LEFT JOIN geografico.ubicacion u ON u.id = p.ubicacion_id
+LEFT JOIN agronomico.cultivo c   ON c.parcela_id = p.id
+LEFT JOIN catalogo.variedades v  ON v.id = c.variedad_id
+WHERE
+    p.poligono IS NOT NULL
+    AND ST_DWithin(
+        p.poligono::geography,
+        ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
+        radio_km * 1000
+    )
+    AND v.activo = TRUE
+ORDER BY p.id, distancia_km;
+$$ LANGUAGE SQL STABLE;
+
+-- GeoJSON de todas las parcelas con datos de variedad (para el mapa)
+CREATE OR REPLACE FUNCTION geografico.parcelas_geojson(
+    ciclo_filtro     TEXT    DEFAULT NULL,
+    anio_filtro      INTEGER DEFAULT NULL
+) RETURNS JSON AS $$
+SELECT json_build_object(
+    'type', 'FeatureCollection',
+    'features', json_agg(
+        json_build_object(
+            'type', 'Feature',
+            'geometry', ST_AsGeoJSON(p.poligono)::json,
+            'properties', json_build_object(
+                'parcela_id',     p.id,
+                'nombre',         p.nombre,
+                'productor',      pr.nombres,
+                'municipio',      m.nombre,
+                'altitud_msnm',   u.altitud_m,
+                'superficie_ha',  p.superficie_ha,
+                'ciclo',          c.ciclo,
+                'anio',           c.anio,
+                'variedad',       v.nombre
+            )
+        )
+    )
+)
+FROM geografico.parcela p
+LEFT JOIN social.productor pr      ON pr.id = p.productor_id
+LEFT JOIN catalogo.municipio m     ON m.id = pr.municipio_id
+LEFT JOIN geografico.ubicacion u   ON u.id = p.ubicacion_id
+LEFT JOIN agronomico.cultivo c     ON c.parcela_id = p.id
+LEFT JOIN catalogo.variedades v    ON v.id = c.variedad_id
+WHERE (ciclo_filtro IS NULL OR c.ciclo::TEXT = ciclo_filtro)
+  AND (anio_filtro  IS NULL OR c.anio        = anio_filtro);
+$$ LANGUAGE SQL STABLE;

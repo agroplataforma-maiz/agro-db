@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS ambiental.estacion_meteorologica (
     updated_at      TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_estacion_activa ON ambiental.estacion_meteorologica(activa);
+
 -- ============================================================
 -- 2. MEDICIÓN AMBIENTAL
 -- Medición ambiental puntual
