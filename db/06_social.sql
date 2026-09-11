@@ -76,6 +76,49 @@ CREATE TABLE IF NOT EXISTS social.tecnico_campo (
 );
 
 -- ============================================================
+-- 1c. TECNICO DE CAMPO - PRODUCTOR
+-- Relación entre técnicos de campo y productores
+-- ============================================================
+CREATE TABLE IF NOT EXISTS social.tecnico_productor (
+    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    tecnico_campo_id        UUID NOT NULL
+                            REFERENCES social.tecnico_campo(id)
+                            ON DELETE CASCADE
+                            ON UPDATE CASCADE,
+
+    productor_id            UUID NOT NULL
+                            REFERENCES core.productor(id)
+                            ON DELETE CASCADE
+                            ON UPDATE CASCADE,
+
+    estado                  VARCHAR(20) NOT NULL DEFAULT 'activo'
+                            CHECK (estado IN ('activo', 'finalizado')),
+
+    fecha_asignacion        TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    fecha_finalizacion      TIMESTAMPTZ,
+
+    notas                   TEXT,
+
+    motivo_finalizacion     TEXT,
+
+    asignado_por_usuario_id UUID
+                            REFERENCES sistema.usuario(id)
+                            ON DELETE SET NULL,
+
+    finalizado_por_usuario_id UUID
+                            REFERENCES sistema.usuario(id)
+                            ON DELETE SET NULL,
+
+    creado_en               TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    actualizado_en          TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    UNIQUE (tecnico_campo_id, productor_id)
+);
+
+-- ============================================================
 -- 1a. INVESTIGADOR - USUARIO (1:1)
 -- Relación entre investigador y usuario del sistema
 -- ============================================================
@@ -94,11 +137,40 @@ CREATE TABLE IF NOT EXISTS social.investigador (
   UNIQUE(user_id)
 );
 
+-- ============================================================
+-- 4. CONSENTIMIENTO INFORMADO
+-- Registro de consentimiento informado para uso de datos y fotografías de los productores
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS social.consentimiento (
+    id                   SERIAL PRIMARY KEY,
+    productor_id         UUID REFERENCES core.productor(id) 
+                         ON DELETE CASCADE 
+                         ON UPDATE CASCADE,
+    fecha                DATE DEFAULT CURRENT_DATE,
+    tipo                 VARCHAR(20) ,
+    autoriza_foto        BOOLEAN DEFAULT FALSE,
+    autoriza_datos       BOOLEAN DEFAULT FALSE,
+    autoriza_publicacion BOOLEAN DEFAULT FALSE,
+    observaciones        TEXT,
+    registrado_por       UUID REFERENCES social.tecnico_campo(id) 
+                         ON DELETE SET NULL 
+                         ON UPDATE CASCADE,
+    created_at           TIMESTAMP DEFAULT NOW(),
+    updated_at           TIMESTAMP DEFAULT NOW(),
+    creado_en            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado_en       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CHECK (tipo IN ('verbal','escrito'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_consentimiento_productor ON social.consentimiento(productor_id);
+
 CREATE TABLE IF NOT EXISTS social.informante (
     id                  SERIAL PRIMARY KEY,
     uuid                UUID UNIQUE DEFAULT uuid_generate_v4(),
     clave_anonima       VARCHAR(20) UNIQUE NOT NULL, -- Ej: INF-OAX-001
-    comunidad_id        INTEGER REFERENCES core.comunidad(id) 
+    comunidad_id        UUID REFERENCES core.comunidad(id) 
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE, -- localidad normalizada
     productor_id        UUID REFERENCES core.productor(id) 
@@ -179,34 +251,6 @@ CREATE TABLE IF NOT EXISTS social.productor_lengua (
     PRIMARY KEY (productor_id, lengua_id)
 );
 
--- ============================================================
--- 4. CONSENTIMIENTO INFORMADO
--- Registro de consentimiento informado para uso de datos y fotografías de los productores
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS social.consentimiento (
-    id                   SERIAL PRIMARY KEY,
-    productor_id         UUID REFERENCES core.productor(id) 
-                         ON DELETE CASCADE 
-                         ON UPDATE CASCADE,
-    fecha                DATE DEFAULT CURRENT_DATE,
-    tipo                 VARCHAR(20) ,
-    autoriza_foto        BOOLEAN DEFAULT FALSE,
-    autoriza_datos       BOOLEAN DEFAULT FALSE,
-    autoriza_publicacion BOOLEAN DEFAULT FALSE,
-    observaciones        TEXT,
-    registrado_por       UUID REFERENCES social.tecnico_campo(id) 
-                         ON DELETE SET NULL 
-                         ON UPDATE CASCADE,
-    created_at           TIMESTAMP DEFAULT NOW(),
-    updated_at           TIMESTAMP DEFAULT NOW(),
-    creado_en            TIMESTAMPTZ NOT NULL DEFAULT now(),
-    actualizado_en       TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-    CHECK (tipo IN ('verbal','escrito'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_consentimiento_productor ON social.consentimiento(productor_id);
 
 -- ============================================================
 -- 5. PERFIL SOCIOECONOMICO
@@ -334,7 +378,7 @@ CREATE INDEX IF NOT EXISTS idx_seguridad_productor ON social.seguridad_alimentar
 
 CREATE TABLE IF NOT EXISTS social.red_intercambio (
     id                               SERIAL PRIMARY KEY,
-    productor_id                     INTEGER REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    productor_id                     UUID REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,
     frecuencia_intercambio_semilla   VARCHAR(30) CHECK (frecuencia_intercambio_semilla IN (
                                          'nunca','ocasionalmente','frecuentemente','siempre'
                                      )),
@@ -391,7 +435,7 @@ CREATE INDEX IF NOT EXISTS idx_red_productor ON social.red_intercambio(productor
 
 CREATE TABLE IF NOT EXISTS social.vulnerabilidad_climatica (
     id                               SERIAL PRIMARY KEY,
-    productor_id                     INTEGER REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    productor_id                     UUID REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,
     se_siente_vulnerable             BOOLEAN,
     razon_vulnerabilidad             TEXT,
     afecta_sequia                    BOOLEAN DEFAULT FALSE,
@@ -428,7 +472,7 @@ CREATE INDEX IF NOT EXISTS idx_vulnerabilidad_productor ON social.vulnerabilidad
 -- ============================================================
 CREATE TABLE IF NOT EXISTS social.geolocalizacion_productor (
     id                  SERIAL PRIMARY KEY,
-    productor_id        INTEGER REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE UNIQUE,
+    productor_id        UUID REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE UNIQUE,
 
     -- Coordenadas GPS (formato KoboToolbox: lat lon alt precisión)
     latitud             DECIMAL(10, 7),
@@ -463,8 +507,8 @@ CREATE TABLE IF NOT EXISTS social.geolocalizacion_productor (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS social.sistema_semilla (
     id                          SERIAL PRIMARY KEY,
-    productor_id                INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE RESTRICT ON UPDATE CASCADE,   -- FK a social.productor
-    germoplasma_id              INTEGER NOT NULL REFERENCES agronomico.germoplasma(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    productor_id                UUID NOT NULL REFERENCES core.productor(id) ON DELETE RESTRICT ON UPDATE CASCADE,   -- FK a social.productor
+    germoplasma_id              UUID NOT NULL REFERENCES core.germoplasma(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     -- Origen
     origen_semilla_id           INTEGER REFERENCES catalogo.origen_semilla(id) ON DELETE SET NULL ON UPDATE CASCADE,
     origen_detalle              VARCHAR(200),
@@ -584,7 +628,7 @@ CREATE TABLE IF NOT EXISTS social.entrevista (
     codigo          VARCHAR(30) UNIQUE NOT NULL, -- Ej: ENT-OAX-2024-001
     informante_id   INTEGER NOT NULL REFERENCES social.informante(id),
     investigador_id UUID NOT NULL REFERENCES social.investigador(id),
-    comunidad_id    INTEGER REFERENCES social.comunidad(id),
+    comunidad_id    UUID REFERENCES core.comunidad(id),
     -- Contexto
     fecha_inicio    TIMESTAMPTZ NOT NULL,
     fecha_fin       TIMESTAMPTZ,
@@ -610,10 +654,10 @@ CREATE TABLE IF NOT EXISTS social.entrevista (
     actualizado_en TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_entrevistas_informante ON social.entrevistas(informante_id);
-CREATE INDEX idx_entrevistas_comunidad  ON social.entrevistas(comunidad_id);
-CREATE INDEX idx_entrevistas_fecha      ON social.entrevistas(fecha_inicio DESC);
-CREATE INDEX idx_entrevistas_estado     ON social.entrevistas(estado);
+CREATE INDEX idx_entrevista_informante ON social.entrevista(informante_id);
+CREATE INDEX idx_entrevista_comunidad  ON social.entrevista(comunidad_id);
+CREATE INDEX idx_entrevista_fecha      ON social.entrevista(fecha_inicio DESC);
+CREATE INDEX idx_entrevista_estado     ON social.entrevista(estado);
 
 CREATE TABLE social.guias_entrevista (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -641,7 +685,7 @@ CREATE TABLE social.preguntas_guia (
 
 CREATE TABLE social.respuestas_entrevista (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    entrevista_id   UUID NOT NULL REFERENCES social.entrevistas(id),
+    entrevista_id   UUID NOT NULL REFERENCES social.entrevista(id),
     pregunta_id     UUID REFERENCES social.preguntas_guia(id),
     -- Contenido
     respuesta_texto     TEXT,

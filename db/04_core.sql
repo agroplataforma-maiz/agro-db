@@ -244,3 +244,26 @@ CREATE TABLE core.siembra (
     ciclo_agricola      VARCHAR(20), -- ej. PV, OI
     UNIQUE (parcela_id, germoplasma_id, fecha_siembra)
 );
+
+--- ============================================================
+-- 7. CORE: ORGANIZACION
+-- Se crea una organizacion en la que se encuentran administradores, investigadores y tecnicos de campo.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS core.organizacion (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre VARCHAR(200) NOT NULL UNIQUE,
+    descripcion TEXT,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS core.organizacion_miembro (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organizacion_id UUID NOT NULL REFERENCES core.organizacion(id) ON DELETE CASCADE,
+    usuario_id UUID NOT NULL REFERENCES sistema.usuario(id) ON DELETE CASCADE,
+    fecha_ingreso TIMESTAMPTZ NOT NULL DEFAULT now(),
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (organizacion_id, usuario_id)
+);

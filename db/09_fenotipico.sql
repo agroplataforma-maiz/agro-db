@@ -2,6 +2,7 @@
 -- ESQUEMA: fenotipico
 -- Evaluaciones fenotípicas (22 variables Anexo I),
 -- evidencia multimedia, análisis nutrimental (Etapa 2)
+-- Residente
 -- ============================================================
 
 SET search_path TO fenotipico, public;

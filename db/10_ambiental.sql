@@ -2,6 +2,7 @@
 -- ESQUEMA: ambiental
 -- Mediciones climáticas, índices de vegetación,
 -- amenazas socioambientales, estaciones meteorológicas
+-- PostgreSQL/PostGIS
 -- ============================================================
 
 SET search_path TO ambiental, public;

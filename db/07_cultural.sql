@@ -27,7 +27,7 @@ SET search_path TO cultural, public;
 
 CREATE TABLE IF NOT EXISTS cultural.saber_tradicional (
     id                          SERIAL PRIMARY KEY,
-    productor_id                INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a social.productor
+    productor_id                UUID NOT NULL REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a core.productor
     comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
 
     -- Categoría del saber
@@ -121,7 +121,7 @@ CREATE INDEX IF NOT EXISTS idx_ritual_comunidad ON cultural.ritual_agricola(comu
 -- Productores que conocen o participan en el ritual (N:M)
 CREATE TABLE IF NOT EXISTS cultural.ritual_productor (
     ritual_id       INTEGER NOT NULL REFERENCES cultural.ritual_agricola(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    productor_id    INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a social.productor
+    productor_id    UUID NOT NULL REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a core.productor
     rol             VARCHAR(100),   -- ej. organizador, participante, informante
     PRIMARY KEY (ritual_id, productor_id)
 );
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS cultural.ritual_productor (
 CREATE TABLE IF NOT EXISTS cultural.narrativa_oral (
     id                          SERIAL PRIMARY KEY,
     comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
-    productor_id                INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a social.productor (narrador)
+    productor_id                UUID NOT NULL REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a core.productor (narrador)
 
     -- Clasificación
     tipo_narrativa_oral_id INTEGER NOT NULL REFERENCES catalogo.tipo_narrativa_oral(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.tipo_narrativa_oral      ,
@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS cultural.gastronomia_tradicional (
 -- Productores que conocen o preparan el platillo (N:M)
 CREATE TABLE IF NOT EXISTS cultural.gastronomia_productor (
     gastronomia_id  INTEGER NOT NULL REFERENCES cultural.gastronomia_tradicional(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    productor_id    INTEGER NOT NULL REFERENCES social.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a social.productor
+    productor_id    UUID NOT NULL REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a core.productor
     es_preparador   BOOLEAN DEFAULT TRUE,   -- si lo prepara o solo lo conoce
     PRIMARY KEY (gastronomia_id, productor_id)
 );
@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS cultural.gastronomia_productor (
 
 CREATE TABLE IF NOT EXISTS cultural.transmision_conocimiento (
     id                              SERIAL PRIMARY KEY,
-    productor_id                    INTEGER REFERENCES social.productor(id),    -- FK a social.productor
+    productor_id                    UUID REFERENCES core.productor(id),    -- FK a core.productor
 
     -- Recepción del conocimiento
     recibio_conocimiento_familiar   BOOLEAN DEFAULT FALSE,
@@ -295,7 +295,7 @@ CREATE INDEX IF NOT EXISTS idx_transmision_productor ON cultural.transmision_con
 
 CREATE TABLE IF NOT EXISTS cultural.identidad_cultural (
     id                              SERIAL PRIMARY KEY,
-    productor_id                    INTEGER REFERENCES social.productor(id),    -- FK a social.productor
+    productor_id                    UUID REFERENCES core.productor(id),    -- FK a core.productor
 
     -- Autoadscripción étnica
     se_identifica_etnia             BOOLEAN DEFAULT FALSE,
@@ -419,7 +419,7 @@ CREATE TABLE IF NOT EXISTS cultural.medio_cultural (
 
     -- Consentimiento (heredado del consentimiento del productor en F1)
     consentimiento_verificado BOOLEAN DEFAULT FALSE,
-    productor_id    INTEGER REFERENCES social.productor(id),
+    productor_id    UUID REFERENCES core.productor(id),
 
     -- Metadatos técnicos (opcionales, para enriquecer en post-proceso)
     duracion_seg    INTEGER,        -- solo para audio/video
@@ -446,14 +446,14 @@ CREATE TABLE IF NOT EXISTS cultural.sesion_entrevista (
     id                      SERIAL PRIMARY KEY,
 
     -- Vínculo con el productor (código capturado en grp_vinculo de F5)
-    productor_id            INTEGER REFERENCES social.productor(id),
+    productor_id            UUID REFERENCES core.productor(id),
     codigo_productor        VARCHAR(20),    -- HP-2025-001, para validación cruzada con F1
 
     -- Metadatos de la visita
     fecha_registro          DATE DEFAULT CURRENT_DATE,
     registrador             VARCHAR(150),
     municipio_id            INTEGER REFERENCES catalogo.municipio(id),
-    comunidad_id            INTEGER REFERENCES catalogo.comunidad(id),
+    comunidad_id            UUID REFERENCES core.comunidad(id),
     comunidad_texto         VARCHAR(200),   -- si no está catalogada aún
     lengua_entrevista       VARCHAR(30) CHECK (lengua_entrevista IN (
                                 'teenek','nahuatl','pame','español','otra'

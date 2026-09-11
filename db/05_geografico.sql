@@ -2,6 +2,7 @@
 -- ESQUEMA: geo
 -- Ubicaciones, parcelas, capas SIG, imágenes satelitales,
 -- vuelos de dron, productos de dron, zonas prioritarias
+-- PostgreSQL/PostGIS
 
 -- PEE-2025-G-369 | TecNM Ciudad Valles
 -- Versión: 1.0
@@ -94,7 +95,7 @@ CREATE TABLE IF NOT EXISTS geo.vuelo_dron (
     num_imagenes        INTEGER,             -- total de fotos capturadas en el vuelo
     software_vuelo      VARCHAR(100),        -- ej. DJI Pilot 2, Pix4Dcapture
     condiciones_clima   TEXT,
-    parcela_id          INTEGER REFERENCES geo.parcela(id) 
+    parcela_id          UUID REFERENCES core.parcela(id) 
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE,
     area_vuelo          GEOMETRY(Polygon, 4326) NOT NULL,
@@ -163,7 +164,7 @@ CREATE TABLE IF NOT EXISTS geo.producto_dron (
 
     CHECK (tamanio_mb > 0),
     CHECK (resolucion_cm_px > 0),
-    UNIQUE (vuelo_id, tipo_producto_dron_id, ruta_archivo)
+    UNIQUE (vuelo_id, tipo_producto_id, ruta_almacenamiento)
 );
 
 CREATE INDEX IF NOT EXISTS idx_producto_dron_extent ON geo.producto_dron USING GIST (extent_geom);
@@ -191,7 +192,7 @@ CREATE TABLE IF NOT EXISTS geo.capa_sig (
     descripcion          TEXT,
     anio_referencia      SMALLINT,
     creado_en            TIMESTAMPTZ DEFAULT now(),
-    actualizado_en       TIMESTAMPTZ DEFAULT now(),
+    actualizado_en       TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_capa_sig_nombre ON geo.capa_sig(nombre);
@@ -286,7 +287,7 @@ CREATE INDEX IF NOT EXISTS idx_cambio_uso_suelo_clase_final ON geo.cambio_uso_su
 CREATE TABLE IF NOT EXISTS geo.visita_campo (
     id                  SERIAL PRIMARY KEY,
     fecha_visita        DATE NOT NULL,
-    comunidad_id        INTEGER REFERENCES core.comunidad(id) 
+    comunidad_id        UUID REFERENCES core.comunidad(id) 
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE,
     responsable_visita  UUID REFERENCES sistema.usuario(id) 
@@ -303,7 +304,7 @@ CREATE TABLE IF NOT EXISTS geo.visita_campo (
 );
 
 CREATE INDEX IF NOT EXISTS idx_visita_campo_punto ON geo.visita_campo USING GIST (punto_inicio);
-CREATE INDEX IF NOT EXISTS idx_visita_campo_localidad ON geo.visita_campo(localidad_id);
+CREATE INDEX IF NOT EXISTS idx_visita_campo_comunidad ON geo.visita_campo(comunidad_id);
 
 -- ============================================================
 --  11. OBSERVACIÓN AMBIENTAL EN CAMPO
@@ -315,8 +316,8 @@ CREATE INDEX IF NOT EXISTS idx_visita_campo_localidad ON geo.visita_campo(locali
 
 CREATE TABLE IF NOT EXISTS geo.observacion_campo (
     id                  SERIAL PRIMARY KEY,
-    parcela_id          INTEGER REFERENCES geo.parcela(id) NOT NULL,
-    ubicacion_id        INTEGER REFERENCES geo.ubicacion(id),
+    parcela_id          UUID REFERENCES core.parcela(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    ubicacion_id        UUID REFERENCES core.ubicacion(id)ON DELETE SET NULL ON UPDATE CASCADE,
     -- Observaciones de suelo (táctiles/visuales)
     textura_suelo       VARCHAR(20),
     condicion_humedad   VARCHAR(20),

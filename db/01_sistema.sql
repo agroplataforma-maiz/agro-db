@@ -1,6 +1,6 @@
 -- 01_usuarios.sql
 -- Esquema de usuarios y roles para la plataforma agro
-
+-- PostgreSQL
 -- ============================================================
 -- 1. ROLES
 -- Los roles definen los permisos y niveles de acceso de los usuarios en la plataforma.

@@ -2,6 +2,7 @@
 -- ESQUEMA: catalogo
 -- PEE-2025-G-369 | TecNM Ciudad Valles
 -- Versión: 1.0
+--PostgreSQL
 --
 -- EJECUTAR ANTES de todos los demás esquemas
 -- ya que social.*, geografico.* y agronomico.*
@@ -109,6 +110,44 @@ CREATE TABLE IF NOT EXISTS catalogo.uso_maiz (
 );
 
 CREATE INDEX idx_uso_maiz_nombre ON catalogo.uso_maiz(nombre);
+
+-- ============================================================
+-- 5. CATALOGO: origen de la semilla
+-- Catálogo para identificar el origen de la semilla de maíz
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS catalogo.origen_semilla (
+    id              SERIAL PRIMARY KEY,
+    codigo          VARCHAR(30) UNIQUE NOT NULL,
+    nombre          VARCHAR(100) UNIQUE NOT NULL,
+    descripcion     TEXT,
+    creado_en       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CHECK (codigo ~ '^[A-Z0-9_]+$')
+);
+
+CREATE INDEX idx_origen_semilla_nombre
+    ON catalogo.origen_semilla(nombre);
+
+INSERT INTO catalogo.origen_semilla
+    (codigo, nombre, descripcion)
+VALUES
+    ('PROPIA', 'Semilla propia',
+        'Semilla conservada y seleccionada por el propio productor.'),
+    ('INTERCAMBIO', 'Intercambio comunitario',
+        'Semilla obtenida mediante intercambio con otro productor o miembro de la comunidad.'),
+    ('COMPRA', 'Compra',
+        'Semilla adquirida mediante compra.'),
+    ('FAMILIAR', 'Herencia familiar',
+        'Semilla recibida o heredada de familiares.'),
+    ('COMUNIDAD', 'Origen comunitario',
+        'Semilla obtenida dentro de la comunidad.'),
+    ('BANCO', 'Banco de germoplasma',
+        'Semilla procedente de un banco o colección de germoplasma.'),
+    ('OTRO', 'Otro',
+        'Otro origen no especificado.')
+ON CONFLICT (codigo) DO NOTHING;
 
 -- ============================================================
 -- EJE AGRONÓMICO (MANEJO Y PRODUCCIÓN)

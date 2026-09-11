@@ -4,6 +4,8 @@
 -- Incluye información sobre germoplasma, cultivos, ciclos agrícolas, sistema de semillas, usos del maíz cosechado y economía del cultivo
 -- PEE-2025-G-369 | TecNM Ciudad Valles
 -- Versión: 1.0 | Etapa 1
+-- PostgreSQL
+-- Residente
 --
 -- EJECUTAR DESPUÉS de 04_social.sql
 -- EJECUTAR ANTES de 06_cultural.sql
