@@ -84,5 +84,5 @@ CREATE INDEX IF NOT EXISTS idx_amenaza_municipio ON ambiental.amenaza(municipio_
 
 CREATE INDEX IF NOT EXISTS idx_amenaza_fecha ON ambiental.amenaza(fecha_deteccion);
 
-CREATE INDEX ix_ra_variedad ON agronomico.registros_agronomicos(variedad_id);
-CREATE INDEX ix_ra_ciclo_anio ON agronomico.registros_agronomicos(ciclo, anio);
+CREATE INDEX ix_ra_variedad ON agro.registros_agronomicos(variedad_id);
+CREATE INDEX ix_ra_ciclo_anio ON agro.registros_agronomicos(ciclo, anio);

@@ -5,7 +5,7 @@
 -- Descripción: Relaciona municipios, comunidades y localidades, mostrando jerarquía territorial y atributos clave de cada nivel.
 -- ============================================================
 
-
+/*
 -- ============================================================
 -- VISTAS DEL CATÁLOGO
 -- ============================================================
@@ -13,18 +13,22 @@
 -- Vista jerárquica completa: municipio -> comunidad -> localidad
 CREATE OR REPLACE VIEW catalogo.v_territorial AS
 SELECT
-    m.clave_completa        AS clave_municipio,
+    m.id                    AS municipio_id,
     m.nombre                AS municipio,
     m.region,
-    m.created_at            AS municipio_created_at,
-    m.updated_at            AS municipio_updated_at,
+    m.creado_en             AS municipio_creado_en,
+    m.actualizado_en        AS municipio_actualizado_en,
+
+    c.id                    AS comunidad_id,
     c.nombre                AS comunidad,
     c.tipo                  AS tipo_comunidad,
-    c.created_at            AS comunidad_created_at,
-    c.updated_at            AS comunidad_updated_at,
-    l.clave_inegi           AS clave_localidad,
+    c.creado_en             AS comunidad_creado_en,
+    c.actualizado_en        AS comunidad_actualizado_en,
+
+    l.id                    AS localidad_id,
+    l.clave_inegi,
     l.nombre                AS localidad,
-    l.tipo                  AS tipo_localidad,
+    l.tipo                   AS tipo_localidad,
     l.categoria,
     l.poblacion_total,
     l.grado_marginacion,
@@ -32,15 +36,18 @@ SELECT
     l.latitud,
     l.longitud,
     l.altitud_m,
-    l.created_at            AS localidad_created_at,
-    l.updated_at            AS localidad_updated_at
-    -- Catálogos adicionales terminan aquí
+    l.creado_en              AS localidad_creado_en,
+    l.actualizado_en         AS localidad_actualizado_en
+
 FROM catalogo.municipio m
-LEFT JOIN catalogo.comunidad c  ON c.municipio_id = m.id
-LEFT JOIN catalogo.localidad l  ON l.comunidad_id = c.id
-LEFT JOIN catalogo.comunidad comcat ON comcat.id = c.id
-LEFT JOIN catalogo.localidad loccat ON loccat.id = l.id
-ORDER BY m.nombre, c.nombre, l.nombre;
+LEFT JOIN core.comunidad c
+    ON c.municipio_id = m.id
+LEFT JOIN catalogo.localidad l
+    ON l.municipio_id = m.id
+ORDER BY
+    m.nombre,
+    c.nombre,
+    l.nombre;
 
 -- Vista resumen por municipio
 CREATE VIEW catalogo.v_resumen_municipio AS
@@ -53,18 +60,18 @@ SELECT
     SUM(l.poblacion_total)  AS poblacion_total,
     SUM(CASE WHEN l.indigena THEN 1 ELSE 0 END) AS localidades_indigenas
 FROM catalogo.municipio m
-LEFT JOIN catalogo.comunidad c  ON c.municipio_id = m.id
+LEFT JOIN core.comunidad c  ON c.municipio_id = m.id
 LEFT JOIN catalogo.localidad l  ON l.municipio_id = m.id
-LEFT JOIN catalogo.comunidad comcat ON comcat.id = c.id
+LEFT JOIN core.comunidad comcat ON comcat.id = c.id
 GROUP BY m.id, m.nombre, m.cabecera
 ORDER BY m.nombre;
 
 -- ============================================================
 -- VISTAS DE GEORREFERENCIACIÓN
 -- ============================================================
-
+/*
 -- Inventario de productos por vuelo
-CREATE VIEW geografico.v_inventario_dron AS
+CREATE VIEW geo.v_inventario_dron AS
 SELECT
     vd.id               AS vuelo_id,
     vd.fecha_vuelo,
@@ -87,24 +94,24 @@ SELECT
 -- BOOL_OR(pd.tipo_producto_dron_id = <id_dem>)                 AS tiene_dem,
 -- BOOL_OR(pd.tipo_producto_dron_id = <id_ortomosaico_rgb>)     AS tiene_ortomosaico_rgb,
 -- BOOL_OR(pd.tipo_producto_dron_id = <id_ortomosaico_ms>)      AS tiene_ortomosaico_ms
-FROM geografico.vuelo_dron vd
-LEFT JOIN geografico.producto_dron pd   ON pd.vuelo_id = vd.id
-LEFT JOIN geografico.parcela par        ON par.id = vd.parcela_id
-LEFT JOIN social.productor p            ON p.id = par.productor_id
-LEFT JOIN catalogo.comunidad com        ON com.id = p.localidad_id
+FROM geo.vuelo_dron vd
+LEFT JOIN geo.producto_dron pd   ON pd.vuelo_id = vd.id
+LEFT JOIN core.parcela par        ON par.id = vd.parcela_id
+LEFT JOIN core.productor p            ON p.id = par.productor_id
+LEFT JOIN core.comunidad com ON com.id = p.comunidad_id
 LEFT JOIN catalogo.municipio mun        ON mun.id = com.municipio_id
-LEFT JOIN catalogo.comunidad comcat     ON comcat.id = com.id
+LEFT JOIN core.comunidad comcat     ON comcat.id = com.id
 GROUP BY vd.id, vd.fecha_vuelo, vd.modelo_dron, vd.tipo_sensor,
          vd.area_cubierta_ha, vd.resolucion_cm_px, vd.num_imagenes,
          par.nombre, mun.nombre
 ORDER BY vd.fecha_vuelo DESC;
-
+*/
 -- ============================================================
 -- VISTAS AGRONOMICAS
 -- ============================================================
 
 -- Vista integrada: germoplasma y cultivos registrados
-CREATE VIEW agronomico.v_germoplasma_cultivo AS
+CREATE VIEW agro.v_germoplasma_cultivo AS
 SELECT
     g.id AS germoplasma_id,
     g.codigo_accesion,
@@ -134,13 +141,13 @@ SELECT
     , rm.es_nativa AS raza_es_nativa
     , cg.es_nativo AS color_grano_es_nativo
     , ec.nivel_riesgo AS estado_conservacion_nivel_riesgo
-FROM agronomico.germoplasma g
+FROM core.germoplasma g
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
 LEFT JOIN catalogo.estado_conservacion ec ON ec.id = g.estado_conservacion_id
-LEFT JOIN catalogo.comunidad com ON com.id = g.comunidad_id
+LEFT JOIN core.comunidad com ON com.id = g.comunidad_id
 LEFT JOIN catalogo.municipio mun ON mun.id = com.municipio_id
-LEFT JOIN agronomico.cultivo c ON c.germoplasma_id = g.id;
+LEFT JOIN core.cultivo c ON c.germoplasma_id = g.id;
 
 -- Vista: sistema de semillas y productores
 CREATE VIEW social.v_sistema_semilla AS
@@ -160,10 +167,10 @@ SELECT
     ss.ventaja_resistencia_sequia,
     ss.ventaja_resistencia_plagas
 FROM social.sistema_semilla ss
-LEFT JOIN social.productor p ON p.id = ss.productor_id
-LEFT JOIN agronomico.germoplasma g ON g.id = ss.germoplasma_id;
+LEFT JOIN core.productor p ON p.id = ss.productor_id
+LEFT JOIN core.germoplasma g ON g.id = ss.germoplasma_id;
 
-CREATE VIEW agronomico.v_destino_produccion AS
+CREATE VIEW agro.v_destino_produccion AS
 SELECT
     u.id,
     u.cultivo_id,
@@ -181,8 +188,8 @@ SELECT
     rm.nombre AS raza,
     cg.nombre AS color_grano
 FROM cultural.uso_maiz u
-LEFT JOIN agronomico.cultivo c ON c.id = u.cultivo_id
-LEFT JOIN agronomico.germoplasma g ON g.id = c.germoplasma_id
+LEFT JOIN core.cultivo c ON c.id = u.cultivo_id
+LEFT JOIN core.germoplasma g ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id;
 
@@ -201,12 +208,12 @@ SELECT
     rm.nombre AS raza,
     cg.nombre AS color_grano
 FROM social.economia_cultivo e
-LEFT JOIN agronomico.cultivo c ON c.id = e.cultivo_id
-LEFT JOIN agronomico.germoplasma g ON g.id = c.germoplasma_id
+LEFT JOIN core.cultivo c ON c.id = e.cultivo_id
+LEFT JOIN core.germoplasma g ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id;
 
-CREATE VIEW agronomico.v_cultivo_integrado AS
+CREATE VIEW agro.v_cultivo_integrado AS
 SELECT
     c.id AS cultivo_id,
     g.codigo_accesion,
@@ -228,12 +235,12 @@ SELECT
     u.produccion_total_kg,
     e.costo_total,
     e.ingreso_venta_maiz
-FROM agronomico.cultivo c
-LEFT JOIN agronomico.germoplasma g ON g.id = c.germoplasma_id
+FROM core.cultivo c
+LEFT JOIN core.germoplasma g ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
 LEFT JOIN catalogo.estado_conservacion ec ON ec.id = g.estado_conservacion_id
-LEFT JOIN catalogo.comunidad com ON com.id = g.comunidad_id
+LEFT JOIN core.comunidad com ON com.id = g.comunidad_id
 LEFT JOIN catalogo.municipio mun ON mun.id = com.municipio_id
 LEFT JOIN cultural.uso_maiz u ON u.cultivo_id = c.id
 LEFT JOIN social.economia_cultivo e ON e.cultivo_id = c.id;
@@ -288,17 +295,17 @@ SELECT
     vc.afecta_sequia,
     vc.afecta_heladas,
     ec.nivel_riesgo AS estado_conservacion_nivel_riesgo
-FROM agronomico.germoplasma g
+FROM core.germoplasma g
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
 LEFT JOIN catalogo.estado_conservacion ec ON ec.id = g.estado_conservacion_id
-LEFT JOIN agronomico.cultivo c              ON c.germoplasma_id = g.id
-LEFT JOIN geografico.parcela par            ON par.id = c.parcela_id
-LEFT JOIN social.productor p               ON p.id = par.productor_id
-LEFT JOIN catalogo.comunidad com           ON com.id = g.comunidad_id
-LEFT JOIN catalogo.municipio mun           ON mun.id = com.municipio_id
-LEFT JOIN catalogo.localidad loc           ON loc.comunidad_id = com.id
-LEFT JOIN geografico.ubicacion u           ON u.id = par.ubicacion_id
+LEFT JOIN core.cultivo c              ON c.germoplasma_id = g.id
+LEFT JOIN core.parcela par            ON par.id = c.parcela_id
+LEFT JOIN core.productor p               ON p.id = par.productor_id
+LEFT JOIN core.comunidad com           ON com.id = g.comunidad_id
+LEFT JOIN catalogo.municipio mun ON mun.id = p.municipio_id
+LEFT JOIN catalogo.localidad loc           ON loc.municipio_id = com.municipio_id
+LEFT JOIN core.ubicacion u           ON u.id = par.ubicacion_id
 LEFT JOIN LATERAL (
     SELECT ndvi, fecha_calculo, estado_vegetacion
     FROM ambiental.indice_vegetacion iv2
@@ -322,12 +329,12 @@ SELECT
     SUM(CASE WHEN vc.se_siente_vulnerable THEN 1 ELSE 0 END) AS productores_vulnerables,
     ROUND(AVG(iv.ndvi),4)                   AS ndvi_promedio
 FROM catalogo.municipio mun
-LEFT JOIN catalogo.comunidad com           ON com.municipio_id = mun.id
-    LEFT JOIN catalogo.localidad l             ON l.comunidad_id = com.id
-    LEFT JOIN social.productor p               ON p.localidad_id = l.id
-LEFT JOIN geografico.parcela par           ON par.productor_id = p.id
-LEFT JOIN agronomico.cultivo c             ON c.parcela_id = par.id
-LEFT JOIN agronomico.germoplasma g         ON g.id = c.germoplasma_id
+LEFT JOIN core.comunidad com           ON com.municipio_id = mun.id
+    LEFT JOIN catalogo.localidad l             ON l.municipio_id = com.municipio_id
+    LEFT JOIN core.productor p               ON p.localidad_id = l.id
+LEFT JOIN core.parcela par           ON par.productor_id = p.id
+LEFT JOIN core.cultivo c             ON c.parcela_id = par.id
+LEFT JOIN core.germoplasma g         ON g.id = c.germoplasma_id
 LEFT JOIN fenotipico.evaluacion_fenotipica ef ON ef.cultivo_id = c.id
 LEFT JOIN social.seguridad_alimentaria sa  ON sa.productor_id = p.id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
@@ -355,10 +362,10 @@ SELECT
 FROM ambiental.amenaza a
 LEFT JOIN catalogo.tipo_amenaza ta ON ta.id = a.tipo_amenaza_id
 LEFT JOIN catalogo.municipio mun   ON mun.id = a.municipio_id
-LEFT JOIN geografico.parcela par   ON ST_Within(par.poligono, a.poligono)
-LEFT JOIN social.productor p       ON p.id = par.productor_id
-LEFT JOIN agronomico.cultivo c     ON c.parcela_id = par.id
-LEFT JOIN agronomico.germoplasma g ON g.id = c.germoplasma_id
+LEFT JOIN core.parcela par   ON ST_Within(par.poligono, a.poligono)
+LEFT JOIN core.productor p       ON p.id = par.productor_id
+LEFT JOIN core.cultivo c     ON c.parcela_id = par.id
+LEFT JOIN core.germoplasma g ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
 WHERE a.esta_activa = TRUE
@@ -390,13 +397,13 @@ SELECT
     sn.ndvi_promedio -
         LAG(sn.ndvi_promedio) OVER (PARTITION BY par.id ORDER BY sn.fecha) AS cambio_ndvi
 FROM ambiental.serie_ndvi sn
-JOIN geografico.parcela par             ON par.id = sn.parcela_id
-LEFT JOIN social.productor p           ON p.id = par.productor_id
-LEFT JOIN agronomico.cultivo c         ON c.parcela_id = par.id
-LEFT JOIN agronomico.germoplasma g     ON g.id = c.germoplasma_id
+JOIN core.parcela par             ON par.id = sn.parcela_id
+LEFT JOIN core.productor p           ON p.id = par.productor_id
+LEFT JOIN core.cultivo c         ON c.parcela_id = par.id
+LEFT JOIN core.germoplasma g     ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm        ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg      ON cg.id = g.color_grano_id
-LEFT JOIN catalogo.comunidad com       ON com.id = g.comunidad_id
+LEFT JOIN core.comunidad com       ON com.id = g.comunidad_id
 LEFT JOIN catalogo.municipio mun       ON mun.id = com.municipio_id
 ORDER BY par.id, sn.fecha;
 
@@ -425,13 +432,13 @@ SELECT
     rn.capacidad_antioxidante
 FROM fenotipico.muestra_nutrimental mn
 JOIN fenotipico.resultado_nutrimental rn ON rn.muestra_id = mn.id
-JOIN agronomico.germoplasma g            ON g.id = mn.germoplasma_id
+JOIN core.germoplasma g            ON g.id = mn.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
-LEFT JOIN geografico.parcela par         ON par.id = mn.parcela_id
+LEFT JOIN core.parcela par         ON par.id = mn.parcela_id
 LEFT JOIN catalogo.estado_conservacion ec ON ec.id = g.estado_conservacion_id
-LEFT JOIN social.productor p            ON p.id = par.productor_id
-LEFT JOIN catalogo.comunidad com        ON com.id = g.comunidad_id
+LEFT JOIN core.productor p            ON p.id = par.productor_id
+LEFT JOIN core.comunidad com        ON com.id = g.comunidad_id
 LEFT JOIN catalogo.municipio mun        ON mun.id = com.municipio_id
 ORDER BY rn.proteina_pct DESC;
 
@@ -495,16 +502,16 @@ SELECT
     vc.afecta_sequia,
     vc.afecta_heladas
 
-FROM agronomico.germoplasma g
+FROM core.germoplasma g
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
-LEFT JOIN agronomico.cultivo c              ON c.germoplasma_id = g.id
-LEFT JOIN geografico.parcela par            ON par.id = c.parcela_id
-LEFT JOIN social.productor p                ON p.id = par.productor_id
-LEFT JOIN catalogo.comunidad com           ON com.id = g.comunidad_id
+LEFT JOIN core.cultivo c              ON c.germoplasma_id = g.id
+LEFT JOIN core.parcela par            ON par.id = c.parcela_id
+LEFT JOIN core.productor p                ON p.id = par.productor_id
+LEFT JOIN core.comunidad com           ON com.id = g.comunidad_id
 LEFT JOIN catalogo.municipio mun            ON mun.id = com.municipio_id
-LEFT JOIN catalogo.localidad loc            ON loc.comunidad_id = com.id
-LEFT JOIN geografico.ubicacion u            ON u.id = par.ubicacion_id
+LEFT JOIN catalogo.localidad loc            ON loc.municipio_id = com.municipio_id
+LEFT JOIN core.ubicacion u            ON u.id = par.ubicacion_id
 
 -- Suelo
 LEFT JOIN ambiental.condicion_edafica ce    ON ce.parcela_id = par.id
@@ -543,12 +550,12 @@ SELECT
     COUNT(DISTINCT p.id)                         AS total_productores,
     ROUND(AVG(iv.ndvi),4)                        AS ndvi_promedio
 FROM catalogo.municipio mun
-LEFT JOIN catalogo.comunidad com       ON com.municipio_id = mun.id
-LEFT JOIN catalogo.localidad l        ON l.comunidad_id = com.id
-LEFT JOIN social.productor p          ON p.localidad_id = l.id
-LEFT JOIN geografico.parcela par      ON par.productor_id = p.id
-LEFT JOIN agronomico.cultivo c        ON c.parcela_id = par.id
-LEFT JOIN agronomico.germoplasma g    ON g.id = c.germoplasma_id
+LEFT JOIN core.comunidad com       ON com.municipio_id = mun.id
+LEFT JOIN catalogo.localidad l        ON l.municipio_id = com.municipio_id
+LEFT JOIN core.productor p          ON p.localidad_id = l.id
+LEFT JOIN core.parcela par      ON par.productor_id = p.id
+LEFT JOIN core.cultivo c        ON c.parcela_id = par.id
+LEFT JOIN core.germoplasma g    ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm       ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg     ON cg.id = g.color_grano_id
 LEFT JOIN ambiental.indice_vegetacion iv ON iv.parcela_id = par.id
@@ -581,13 +588,13 @@ SELECT
         END
     ) AS indice_resiliencia
 
-FROM agronomico.cultivo c
-JOIN agronomico.germoplasma g          ON g.id = c.germoplasma_id
+FROM core.cultivo c
+JOIN core.germoplasma g          ON g.id = c.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
-JOIN geografico.parcela par            ON par.id = c.parcela_id
-LEFT JOIN social.productor p           ON p.id = par.productor_id
-LEFT JOIN catalogo.comunidad com       ON com.id = g.comunidad_id
+JOIN core.parcela par            ON par.id = c.parcela_id
+LEFT JOIN core.productor p           ON p.id = par.productor_id
+LEFT JOIN core.comunidad com       ON com.id = g.comunidad_id
 LEFT JOIN catalogo.municipio mun       ON mun.id = com.municipio_id
 
 LEFT JOIN LATERAL (
@@ -621,13 +628,13 @@ SELECT
         ELSE 'bajo'
     END AS nivel_prioridad_conservacion
 
-FROM agronomico.germoplasma g
+FROM core.germoplasma g
 LEFT JOIN catalogo.raza_maiz rm ON rm.id = g.raza_id
     LEFT JOIN catalogo.color_grano cg ON cg.id = g.color_grano_id
-JOIN agronomico.cultivo c         ON c.germoplasma_id = g.id
-JOIN geografico.parcela par       ON par.id = c.parcela_id
-JOIN social.productor p           ON p.id = par.productor_id
-JOIN catalogo.comunidad com       ON com.id = g.comunidad_id
+JOIN core.cultivo c         ON c.germoplasma_id = g.id
+JOIN core.parcela par       ON par.id = c.parcela_id
+JOIN core.productor p           ON p.id = par.productor_id
+JOIN core.comunidad com       ON com.id = g.comunidad_id
 JOIN catalogo.municipio mun       ON mun.id = com.municipio_id
 GROUP BY mun.id, mun.nombre
 ORDER BY razas DESC;
@@ -649,9 +656,9 @@ SELECT
     SUM(CASE WHEN st.esta_vigente THEN 1 ELSE 0 END)     AS saberes_vigentes,
     SUM(CASE WHEN NOT st.esta_vigente THEN 1 ELSE 0 END) AS saberes_en_riesgo,
     SUM(CASE WHEN ra.esta_vigente THEN 1 ELSE 0 END)     AS rituales_vigentes
-FROM catalogo.comunidad com
+FROM core.comunidad com
 JOIN catalogo.municipio mun                         ON mun.id = com.municipio_id
-LEFT JOIN catalogo.comunidad comcat                 ON comcat.id = com.id
+LEFT JOIN core.comunidad comcat                 ON comcat.id = com.id
 LEFT JOIN cultural.saber_tradicional st             ON st.comunidad_id = com.id
 LEFT JOIN cultural.ritual_agricola ra               ON ra.comunidad_id = com.id
 LEFT JOIN cultural.narrativa_oral no                ON no.comunidad_id = com.id
@@ -686,13 +693,13 @@ SELECT
      CASE WHEN NOT ic.habla_lengua_originaria THEN 1 ELSE 0 END +
      CASE WHEN NOT tc.transmite_a_hijos THEN 1 ELSE 0 END
     ) AS score_riesgo_cultural
-FROM social.productor p
+FROM core.productor p
 LEFT JOIN catalogo.localidad l             ON l.id = p.localidad_id
-LEFT JOIN catalogo.comunidad com           ON com.id = l.comunidad_id
-LEFT JOIN catalogo.municipio mun           ON mun.id = com.municipio_id
+LEFT JOIN core.comunidad com ON com.id = p.comunidad_id
+LEFT JOIN catalogo.municipio mun ON mun.id = p.municipio_id
 LEFT JOIN cultural.identidad_cultural ic            ON ic.productor_id = p.id
 LEFT JOIN cultural.transmision_conocimiento tc      ON tc.productor_id = p.id
-    LEFT JOIN catalogo.comunidad comcat        ON comcat.id = com.id
+    LEFT JOIN core.comunidad comcat        ON comcat.id = com.id
     -- Catálogos adicionales: comcat.tipo_comunidad, comcat.region
 ORDER BY score_riesgo_cultural DESC;
 
@@ -732,9 +739,9 @@ SELECT
      WHERE gt.variedad_maiz_preferida ILIKE '%' || nlo.nombre || '%') AS platillos_asociados
 FROM cultural.nombre_lengua_originaria nlo
 JOIN catalogo.lengua l              ON l.id = nlo.lengua_id
-LEFT JOIN catalogo.comunidad com    ON com.id = nlo.comunidad_id
+LEFT JOIN core.comunidad com    ON com.id = nlo.comunidad_id
 LEFT JOIN catalogo.municipio mun    ON mun.id = com.municipio_id
-LEFT JOIN agronomico.germoplasma g  ON g.id = nlo.germoplasma_id
+LEFT JOIN core.germoplasma g  ON g.id = nlo.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm     ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg   ON cg.id = g.color_grano_id;
 
@@ -751,9 +758,9 @@ SELECT
     COUNT(*)                            AS total_archivos,
     COUNT(*) FILTER (WHERE mc.consentimiento_verificado) AS con_consentimiento
 FROM cultural.medio_cultural mc
-LEFT JOIN social.productor p        ON p.id = mc.productor_id
+LEFT JOIN core.productor p        ON p.id = mc.productor_id
 LEFT JOIN catalogo.localidad l      ON l.id = p.localidad_id
-LEFT JOIN catalogo.comunidad com    ON com.id = l.comunidad_id
+LEFT JOIN core.comunidad com ON com.id = p.comunidad_id
 LEFT JOIN catalogo.municipio mun    ON mun.id = com.municipio_id
 GROUP BY com.nombre, mun.nombre, mc.entidad_tipo, mc.tipo_medio
 ORDER BY mun.nombre, com.nombre, mc.entidad_tipo;
@@ -798,11 +805,11 @@ SELECT
     ef.rendimiento_estimado_kg
 
 FROM fenotipico.evaluacion_fenotipica ef
-JOIN agronomico.cultivo cu         ON cu.id = ef.cultivo_id
-JOIN agronomico.germoplasma g      ON g.id = cu.germoplasma_id
+JOIN core.cultivo cu         ON cu.id = ef.cultivo_id
+JOIN core.germoplasma g      ON g.id = cu.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm    ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg  ON cg.id = g.color_grano_id
-LEFT JOIN catalogo.comunidad com   ON com.id = ef.comunidad_id
+LEFT JOIN core.comunidad com   ON com.id = ef.comunidad_id
 LEFT JOIN catalogo.municipio mun   ON mun.id = com.municipio_id;
 
 -- Vista integrada: nutrición del maíz nativo por territorio
@@ -844,12 +851,12 @@ SELECT
     rn.triptofano_pct
 
 FROM fenotipico.muestra_nutrimental mn
-JOIN agronomico.germoplasma g      ON g.id = mn.germoplasma_id
+JOIN core.germoplasma g      ON g.id = mn.germoplasma_id
 LEFT JOIN catalogo.raza_maiz rm    ON rm.id = g.raza_id
 LEFT JOIN catalogo.color_grano cg  ON cg.id = g.color_grano_id
 LEFT JOIN fenotipico.resultado_nutrimental rn
        ON rn.muestra_id = mn.id
-LEFT JOIN catalogo.comunidad com   ON com.id = mn.comunidad_id
+LEFT JOIN core.comunidad com   ON com.id = mn.comunidad_id
 LEFT JOIN catalogo.municipio mun   ON mun.id = com.municipio_id;
 
 
@@ -871,7 +878,7 @@ SELECT
     AVG(ma.radiacion_solar)    AS radiacion_promedio,
     AVG(ma.velocidad_viento)   AS viento_promedio
 FROM ambiental.medicion_ambiental ma
-JOIN geografico.ubicacion u
+JOIN core.ubicacion u
     ON u.id = ma.ubicacion_id
 GROUP BY ma.ubicacion_id, u.latitud, u.longitud, DATE(ma.fecha_medicion);
 
@@ -895,16 +902,17 @@ SELECT
     iv.estres_hidrico,
     iv.estres_termico
 FROM ambiental.indice_vegetacion iv
-JOIN geografico.parcela p
+JOIN core.parcela p
     ON p.id = iv.parcela_id
-LEFT JOIN geografico.ubicacion u ON u.id = p.ubicacion_id
-LEFT JOIN catalogo.comunidad com ON com.id = u.comunidad_id
-LEFT JOIN catalogo.municipio mun ON mun.id = com.municipio_id;
+LEFT JOIN core.ubicacion u ON u.id = p.ubicacion_id
+LEFT JOIN core.productor prod ON prod.id = p.productor_id
+LEFT JOIN core.comunidad com ON com.id = prod.comunidad_id
+LEFT JOIN catalogo.municipio mun ON mun.id = prod.municipio_id
 
 
 -- Vista: condiciones de suelo por parcela
 -- Descripción: Presenta las condiciones edáficas (tipo de suelo, textura, pH, nutrientes, materia orgánica, etc.) de cada parcela, asociando comunidad y municipio.
-CREATE VIEW ambiental.v_suelo_parcela AS
+/*CREATE VIEW ambiental.v_suelo_parcela AS
 SELECT
     ce.parcela_id,
     p.nombre            AS parcela,
@@ -920,14 +928,16 @@ SELECT
     ce.capacidad_campo_pct,
     ce.fecha_muestreo
 FROM ambiental.condicion_edafica ce
-JOIN geografico.parcela p
+JOIN core.parcela p
     ON p.id = ce.parcela_id
-LEFT JOIN geografico.ubicacion u
+LEFT JOIN core.ubicacion u
     ON u.id = p.ubicacion_id
-LEFT JOIN catalogo.comunidad com
-    ON com.id = u.comunidad_id
+LEFT JOIN core.productor prod
+LEFT JOIN core.productor prod ON prod.id = p.productor_id
+LEFT JOIN core.comunidad com ON com.id = prod.comunidad_id
+LEFT JOIN catalogo.municipio mun ON mun.id = prod.municipio_id;
 LEFT JOIN catalogo.municipio mun
-    ON mun.id = com.municipio_id;
+    ON mun.id = prod.municipio_id;
 SELECT
     ce.parcela_id,
     p.nombre            AS parcela,
@@ -943,18 +953,22 @@ SELECT
     ce.capacidad_campo_pct,
     ce.fecha_muestreo
 FROM ambiental.condicion_edafica ce
-JOIN geografico.parcela p
+JOIN core.parcela p
     ON p.id = ce.parcela_id
-LEFT JOIN geografico.ubicacion u
+LEFT JOIN core.ubicacion u
     ON u.id = p.ubicacion_id
-LEFT JOIN catalogo.comunidad com
+LEFT JOIN core.comunidad com
     ON com.id = u.comunidad_id
 LEFT JOIN catalogo.municipio mun
     ON mun.id = com.municipio_id;
+*/
 
-
+-- ============================================================
 -- Vista: amenazas socioambientales territoriales
--- Descripción: Lista amenazas ambientales detectadas (tipo, nivel de riesgo, área afectada, estado) vinculadas a la ubicación, comunidad y municipio.
+-- ============================================================
+-- Lista amenazas ambientales detectadas por tipo, nivel de riesgo,
+-- área afectada, estado y municipio.
+
 CREATE VIEW ambiental.v_riesgo_ambiental AS
 SELECT
     a.id,
@@ -963,14 +977,16 @@ SELECT
     a.fecha_deteccion,
     a.area_afectada_ha,
     a.esta_activa,
-    com.nombre      AS comunidad,
-    mun.nombre      AS municipio,
+    NULL::TEXT AS comunidad,
+    mun.nombre AS municipio,
     a.descripcion
 FROM ambiental.amenaza a
-LEFT JOIN catalogo.tipo_amenaza ta ON ta.id = a.tipo_amenaza_id
-LEFT JOIN geografico.ubicacion u ON u.id = a.ubicacion_id
-LEFT JOIN catalogo.comunidad com ON com.id = u.comunidad_id
-LEFT JOIN catalogo.municipio mun ON mun.id = a.municipio_id;
+LEFT JOIN catalogo.tipo_amenaza ta
+    ON ta.id = a.tipo_amenaza_id
+LEFT JOIN core.ubicacion u
+    ON u.id = a.ubicacion_id
+LEFT JOIN catalogo.municipio mun
+    ON mun.id = a.municipio_id;
 
 
 -- Vista: perfil completo de parcela
@@ -1011,19 +1027,22 @@ SELECT
      WHERE iv.parcela_id = par.id
      ORDER BY iv.fecha_calculo DESC LIMIT 1) AS ndvi_reciente,
     -- Conteo de fotos
-    (SELECT COUNT(*) FROM geografico.medio_parcela mp
-     WHERE mp.parcela_id = par.id)  AS total_fotos
-FROM geografico.parcela par
+    -- (SELECT COUNT(*) FROM geografico.medio_parcela mp
+    -- WHERE mp.parcela_id = par.id)  AS total_fotos
+0::BIGINT AS total_fotos    
+FROM core.parcela par
 LEFT JOIN catalogo.sistema_manejo sm     ON sm.id = par.sistema_manejo_id
-LEFT JOIN geografico.ubicacion          ub  ON ub.id  = par.ubicacion_id
+LEFT JOIN core.ubicacion          ub  ON ub.id  = par.ubicacion_id
 LEFT JOIN catalogo.fuente_informacion   fi  ON fi.id = ub.fuente_captura_id
-LEFT JOIN catalogo.comunidad            com ON com.id = ub.comunidad_id
-LEFT JOIN catalogo.municipio            mun ON mun.id = com.municipio_id
-LEFT JOIN geografico.observacion_campo  oc  ON oc.parcela_id = par.id
-LEFT JOIN geografico.historial_parcela  hp  ON hp.parcela_id = par.id
+LEFT JOIN geo.observacion_campo  oc  ON oc.parcela_id = par.id
+LEFT JOIN geo.historial_parcela  hp  ON hp.parcela_id = par.id
 LEFT JOIN ambiental.condicion_edafica   ce  ON ce.parcela_id = par.id
+LEFT JOIN core.productor prod ON prod.id = par.productor_id
+LEFT JOIN core.comunidad com ON com.id = prod.comunidad_id
+LEFT JOIN catalogo.municipio mun ON mun.id = prod.municipio_id
 ORDER BY mun.nombre, com.nombre, par.nombre;
 
+/*
 -- ═══════════════════════════════════════════════════════
 --  VISTAS Y FUNCIONES ÚTILES
 -- ═══════════════════════════════════════════════════════
@@ -1120,3 +1139,5 @@ ORDER BY v.id, distancia_km;
 $$ LANGUAGE SQL STABLE;
 
 -- Uso: SELECT * FROM variedades_en_radio(21.85, -98.95, 50);
+*/
+*/

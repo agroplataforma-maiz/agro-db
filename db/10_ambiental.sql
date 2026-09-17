@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS ambiental.estacion_meteorologica (
     tipo            VARCHAR(30) NOT NULL CHECK (tipo IN ('fisica','virtual','satelital','API')),
     fuente_informacion_id INTEGER REFERENCES catalogo.fuente_informacion(id) ON DELETE SET NULL ON UPDATE CASCADE,
     municipio_id    INTEGER REFERENCES catalogo.municipio(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    ubicacion_id    INTEGER REFERENCES geografico.ubicacion(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.ubicacion
+    ubicacion_id    UUID REFERENCES core.ubicacion(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.ubicacion
     activa          BOOLEAN DEFAULT TRUE,
     fecha_instalacion DATE CHECK (fecha_instalacion IS NULL OR fecha_instalacion <= CURRENT_DATE),
     created_at      TIMESTAMP DEFAULT NOW(),
@@ -33,7 +33,7 @@ CREATE INDEX IF NOT EXISTS idx_estacion_activa ON ambiental.estacion_meteorologi
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ambiental.medicion_ambiental (
     id                  SERIAL PRIMARY KEY,
-    ubicacion_id        INTEGER REFERENCES geografico.ubicacion(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.ubicacion
+    ubicacion_id        UUID REFERENCES core.ubicacion(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.ubicacion
     estacion_id         INTEGER REFERENCES ambiental.estacion_meteorologica(id) ON DELETE SET NULL ON UPDATE CASCADE,
     temperatura_c       DECIMAL(5,2) CHECK (temperatura_c BETWEEN -80 AND 60),
     humedad_pct         DECIMAL(5,2) CHECK (humedad_pct BETWEEN 0 AND 100),
@@ -56,9 +56,9 @@ CREATE TABLE IF NOT EXISTS ambiental.medicion_ambiental (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ambiental.indice_vegetacion (
     id              SERIAL PRIMARY KEY,
-    imagen_id       INTEGER REFERENCES geografico.imagen_satelital(id) ON DELETE CASCADE ON UPDATE CASCADE,   -- FK a geografico.imagen_satelital
-    ubicacion_id    INTEGER REFERENCES geografico.ubicacion(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.ubicacion
-    parcela_id      INTEGER REFERENCES geografico.parcela(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.parcela
+    imagen_id       INTEGER REFERENCES geo.imagen_satelital(id) ON DELETE CASCADE ON UPDATE CASCADE,   -- FK a geografico.imagen_satelital
+    ubicacion_id    UUID REFERENCES core.ubicacion(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.ubicacion
+    parcela_id      UUID REFERENCES core.parcela(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.parcela
     fecha_calculo   DATE NOT NULL,
     -- Índices principales
     ndvi            DECIMAL(6,4) CHECK (ndvi BETWEEN -1 AND 1),   -- Normalized Difference Vegetation Index (-1 a 1)
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS ambiental.indice_vegetacion (
     updated_at      TIMESTAMP DEFAULT NOW()
 );
 
-ALTER TABLE geografico.producto_dron
+ALTER TABLE geo.producto_dron
 ADD CONSTRAINT fk_producto_dron_indice_vegetacion
 FOREIGN KEY (indice_vegetacion_id)
 REFERENCES ambiental.indice_vegetacion(id)
@@ -94,7 +94,7 @@ ON UPDATE CASCADE;
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ambiental.serie_ndvi (
     id              SERIAL PRIMARY KEY,
-    parcela_id      INTEGER NOT NULL REFERENCES geografico.parcela(id) ON DELETE CASCADE ON UPDATE CASCADE,   -- FK a geografico.parcela
+    parcela_id      UUID NOT NULL REFERENCES core.parcela(id) ON DELETE CASCADE ON UPDATE CASCADE,   -- FK a geografico.parcela
     fecha           DATE NOT NULL,
     ndvi_promedio   DECIMAL(6,4) CHECK (ndvi_promedio BETWEEN -1 AND 1),
     ndvi_max        DECIMAL(6,4) CHECK (ndvi_max BETWEEN -1 AND 1),
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS ambiental.serie_ndvi (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ambiental.condicion_edafica (
     id                  SERIAL PRIMARY KEY,
-    parcela_id          INTEGER REFERENCES geografico.parcela(id) ON DELETE CASCADE ON UPDATE CASCADE,   -- FK a geografico.parcela
+    parcela_id          UUID REFERENCES core.parcela(id) ON DELETE CASCADE ON UPDATE CASCADE,   -- FK a geografico.parcela
     -- Variables de suelo
     tipo_suelo          VARCHAR(100),
     textura             VARCHAR(50) CHECK (textura IN ('arcilloso','limoso','arenoso','franco','otro')),
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS ambiental.amenaza (
                             'modelo_ML','otro')),
     fecha_deteccion     DATE NOT NULL,
     municipio_id        INTEGER REFERENCES catalogo.municipio(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a catalogo.municipio
-    ubicacion_id        INTEGER REFERENCES geografico.ubicacion(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.ubicacion
+    ubicacion_id        UUID REFERENCES core.ubicacion(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a geografico.ubicacion
     area_afectada_ha    DECIMAL(12,4) CHECK (area_afectada_ha >= 0),
     poligono            GEOMETRY(MultiPolygon, 4326),
     esta_activa         BOOLEAN DEFAULT TRUE,

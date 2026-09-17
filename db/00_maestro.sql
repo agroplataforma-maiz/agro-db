@@ -6,7 +6,7 @@
 -- ============================================================
 SET client_encoding = 'UTF8';
 
-COMMENT ON DATABASE postgres IS 
+COMMENT ON DATABASE agroplataforma IS
 'Agroplataforma digital para la conservación del maíz nativo en la Huasteca Potosina - Proyecto PEE-2025-G-369';
 
 -- Extensiones necesarias
@@ -26,8 +26,9 @@ CREATE SCHEMA IF NOT EXISTS social;      -- para tablas de productor, consentimi
 CREATE SCHEMA IF NOT EXISTS cultural;    -- para tablas de saberes, rituales, narrativas, gastronomia, identidad
 CREATE SCHEMA IF NOT EXISTS agro; -- para tablas de germoplasma, cultivo, semillas, economia
 CREATE SCHEMA IF NOT EXISTS fenotipico;  -- para tablas de evaluaciones, evidencias, nutrimental    
-CREATE SCHEMA IF NOT EXISTS amb;   -- para tablas de mediciones, indices NDVI, amenazas
+CREATE SCHEMA IF NOT EXISTS ambiental;   -- para tablas de mediciones, indices NDVI, amenazas
 CREATE SCHEMA IF NOT EXISTS indices;     -- para índices compuestos para análisis (ej. indice de diversidad de cultivos)
+CREATE SCHEMA IF NOT EXISTS auditoria;
 
 
 -- =========================
@@ -53,18 +54,18 @@ CREATE SCHEMA IF NOT EXISTS indices;     -- para índices compuestos para análi
 -- TRANSACCIÓN PRINCIPAL
 -- =========================================
 
-\i /docker-entrypoint-initdb.d/01_sistema.sql
-\i /docker-entrypoint-initdb.d/02_catalogo.sql
-\i /docker-entrypoint-initdb.d/03_trazabilidad.sql
-\i /docker-entrypoint-initdb.d/04_core.sql
-\i /docker-entrypoint-initdb.d/05_geografico.sql
-\i /docker-entrypoint-initdb.d/06_social.sql
-\i /docker-entrypoint-initdb.d/07_cultural.sql
-\i /docker-entrypoint-initdb.d/08_agronomico.sql
-\i /docker-entrypoint-initdb.d/09_fenotipico.sql
-\i /docker-entrypoint-initdb.d/10_ambiental.sql
-\i /docker-entrypoint-initdb.d/11_indices.sql
-\i /docker-entrypoint-initdb.d/12_triggers.sql
-\i /docker-entrypoint-initdb.d/13_vistas.sql
-\i /docker-entrypoint-initdb.d/14_datos_base.sql
-\i /docker-entrypoint-initdb.d/15_localidades_colonias.sql
+\i /sql/01_sistema.sql
+\i /sql/02_catalogo.sql
+\i /sql/03_trazabilidad.sql
+\i /sql/04_core.sql
+\i /sql/05_geografico.sql
+\i /sql/08_agronomico.sql
+\i /sql/06_social.sql
+\i /sql/07_cultural.sql
+\i /sql/09_fenotipico.sql
+\i /sql/10_ambiental.sql
+\i /sql/09_indices.sql
+\i /sql/10_triggers.sql
+\i /sql/11_vistas.sql
+\i /sql/12_datos_base.sql
+\i /sql/13_localidades_colonias.sql

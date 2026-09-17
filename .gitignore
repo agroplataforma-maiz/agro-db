@@ -5,4 +5,8 @@
 backups/
 
 # pgAdmin
-pgadmin_data/
+pgadmin_data/*.backup
+*.backup
+11_vistas.sql.backup
+docker-compose.yml.backup
+00_maestro.sql.backup

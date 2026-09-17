@@ -11,10 +11,10 @@ VALUES
     ('CONAGUA SMN - Ciudad Valles',  'virtual', (SELECT id FROM catalogo.fuente_informacion WHERE nombre = 'CONAGUA'),     (SELECT id FROM catalogo.municipio WHERE nombre = 'Ciudad Valles')),
     ('OpenWeather - Aquismón',       'virtual', (SELECT id FROM catalogo.fuente_informacion WHERE nombre = 'OpenWeather'), (SELECT id FROM catalogo.municipio WHERE nombre = 'Aquismón')),
     ('Copernicus ERA5 - Huasteca',   'virtual', (SELECT id FROM catalogo.fuente_informacion WHERE nombre = 'Copernicus'),  (SELECT id FROM catalogo.municipio WHERE nombre = 'Huasteca Potosina'));
-
+/*
 -- Capas SIG base
 -- Campo: anio_referencia 
-INSERT INTO geografico.capa_sig
+INSERT INTO geo.capa_sig
     (nombre, tipo_capa_sig_id, fuente_informacion_id, anio_referencia, formato_archivo_id, url_descarga, descripcion)
 VALUES
     ('Municipios Huasteca Potosina (INEGI 2024)',
@@ -80,4 +80,4 @@ VALUES
      (SELECT id FROM catalogo.formato_archivo WHERE nombre = 'geojson'),
      'https://sig.conanp.gob.mx/website/pagsig/',
      '232 ANPs federales. Incluye Sierra del Abra Tanchipa en la Huasteca');
-
+*/

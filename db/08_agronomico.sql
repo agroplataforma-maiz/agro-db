@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS catalogo.descriptores (
     label_es        VARCHAR(250) NOT NULL,
     label_en        VARCHAR(250),
     tipo_desc       tipo_descriptor NOT NULL,
-    tipo_obs        tipo_observacion NOT NULL,
+    tipo_obs        tipo_observacion,
     tipo_campo      VARCHAR(10) NOT NULL,
     importante      BOOLEAN DEFAULT FALSE,  -- asterisco UPOV
     hint_es         VARCHAR(300),                   -- instrucción de campo
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS catalogo.descriptores (
     rango_max       NUMERIC(6,1),
 
     CHECK (modulo IN ('fenotipico', 'agronomico')),
-    CHECK (tipo_campo IN ('select', 'number')),
+    CHECK (tipo_campo IN ('select', 'number'))
 );
 
 -- ============================================================
@@ -184,10 +184,10 @@ CREATE TABLE agro.variedad (
     color_grano_id INTEGER REFERENCES catalogo.color_grano(id) 
                   ON DELETE SET NULL 
                   ON UPDATE CASCADE,
-    obtentor_id   INTEGER REFERENCES core.productor(id) 
+    obtentor_id   UUID REFERENCES core.productor(id) 
                   ON DELETE SET NULL 
                   ON UPDATE CASCADE,
-    colector_id   INTEGER REFERENCES sistema.usuario(id) 
+    colector_id   UUID REFERENCES sistema.usuario(id) 
                   ON DELETE SET NULL 
                   ON UPDATE CASCADE, -- técnico de campo que colecta
     notas         TEXT,
@@ -199,7 +199,7 @@ CREATE TABLE agro.variedad (
     CONSTRAINT uq_variedad_nombre UNIQUE (nombre)
 );
 
-CREATE INDEX ix_variedades_tipo   ON agro.variedad(tipo_variedad_id);
+CREATE INDEX ix_variedades_tipo ON agro.variedad(tipo_variedad);
 
 CREATE INDEX ix_variedades_nombre ON agro.variedad USING gin(to_tsvector('spanish', nombre));
 
@@ -225,11 +225,11 @@ CREATE TABLE IF NOT EXISTS agro.registros_agronomicos (
     -- D65: zona de adaptación secundaria
     zona_adapt_sec      VARCHAR(60),
     -- D66: estación de crecimiento principal
-    estacion_ppal       catalogo.ciclo_productivo,
+    estacion_ppal       agro.ciclo_productivo,
     -- D67: estación de crecimiento secundaria
-    estacion_sec        catalogo.ciclo_productivo,
+    estacion_sec        agro.ciclo_productivo,
     -- D68: régimen hídrico
-    regimen_hid         catalogo.regimen_hidrico,
+    regimen_hid         agro.regimen_hidrico,
 
     anio                SMALLINT            NOT NULL,
     observaciones       TEXT,
@@ -254,7 +254,7 @@ VALUES
 -- ── MÓDULO FENOTÍPICO ─────────────────────────────────────
 
 INSERT INTO catalogo.descriptores (
-    id, modulo, etapa_id, etapa_codigo, label_es, label_en, tipo_desc, tipo_obs, tipo_campo, importante, hint_es, rango_min, rango_max
+    id, modulo, etapa_bbch, etapa_codigo, label_es, label_en, tipo_desc, tipo_obs, tipo_campo, importante, hint_es, rango_min, rango_max
 ) VALUES
 -- Plántula E12-14
 (1,'fenotipico','plántula','E12','Primera hoja: coloración de la vaina por antocianinas','First leaf: anthocyanin coloration of sheath','QN','VG','select',false,null,null,null),
@@ -317,7 +317,7 @@ INSERT INTO catalogo.descriptores (
 (55,'fenotipico','madurez','E92','Mazorca: tipo de grano','Ear: type of grain','QL','VS','select',true,'Observar en el tercio central de la mazorca superior',null,null),
 (56,'fenotipico','madurez','E92','Mazorca: forma de la corona del grano','Ear: shape of grain top','PQ','VG','select',false,'Observar en el tercio central de la mazorca superior',null,null),
 (57,'fenotipico','madurez','E92','Mazorca: color del grano','Ear: grain color','QL','VS','select',true,'Apariencia externa de la mazorca superior. Evitar efecto xenia',null,null),
-(58,'fenotipico','madurez','E92','Mazorca: color dorsal del grano','Ear: color of dorsal side of grain','QL','VS','select',false,'Lado opuesto a la posición del embrión, parte media','null',null),
+(58,'fenotipico','madurez','E92','Mazorca: color dorsal del grano','Ear: color of dorsal side of grain','QL','VS','select',false,'Lado opuesto a la posición del embrión, parte media',null,null),
 (59,'fenotipico','madurez','E92','Mazorca: color del endospermo del grano','Ear: color of endosperm of grain','QL','VS','select',false,'Hacer un corte transversal del grano. Evitar efecto xenia',null,null),
 (60,'fenotipico','madurez','E93','Mazorca: coloración por antocianinas en las glumas del olote','Ear: anthocyanin coloration of glumes of cob','QL','VG','select',true,'Observar en el olote de la mazorca superior',null,null),
 (61,'fenotipico','madurez','E93','Mazorca: intensidad de la coloración por antocianinas en las glumas del olote','Ear: coloration intensity by anthocyanin in the cob glumes','PQ','VS','select',false,null,null,null),
@@ -327,15 +327,15 @@ INSERT INTO catalogo.descriptores (
 -- ── MÓDULO AGRONÓMICO ─────────────────────────────────────
 
 INSERT INTO catalogo.descriptores (
-    id, modulo, etapa_id, etapa_codigo, label_es, label_en, tipo_desc, tipo_obs, tipo_campo, importante, hint_es, rango_min, rango_max
+    id, modulo, etapa_bbch, etapa_codigo, label_es, label_en, tipo_desc, tipo_obs, tipo_campo, importante, hint_es, rango_min, rango_max
 ) VALUES
 (25,'agronomico','lechoso','E65','Espiga: floración masculina (días desde siembra)','Tassel: male flowering (days after sowing)','QN','MG','number',true,'Días hasta que el 50% de las plantas se encuentren en antesis. Observar en el tercio medio del eje principal.',40,140),
 (38,'agronomico','lechoso','E65','Jilote: floración femenina (días desde siembra)','Ear: female flowering (days after sowing)','QN','MG','number',false,'Días hasta que el 50% de las plantas presenten estigmas de más de 1 cm de longitud.',40,145),
-(64,'agronomico','general','—','Área de adaptación principal','Main adaptation area','QL','—','select',false,null,null,null),
-(65,'agronomico','general','—','Área de adaptación secundaria','Secondary adaptation area','QL','—','select',false,null,null,null),
-(66,'agronomico','general','—','Estación de crecimiento principal','Main growth season','QL','—','select',false,null,null,null),
-(67,'agronomico','general','—','Estación de crecimiento secundaria','Secondary growth season','QL','—','select',false,null,null,null),
-(68,'agronomico','general','—','Régimen hídrico','Hydric regime','QL','—','select',false,null,null,null);
+(64,'agronomico','general','—','Área de adaptación principal','Main adaptation area','QL',NULL,'select',false,null,null,null),
+(65,'agronomico','general','—','Área de adaptación secundaria','Secondary adaptation area','QL',NULL,'select',false,null,null,null),
+(66,'agronomico','general','—','Estación de crecimiento principal','Main growth season','QL',NULL,'select',false,null,null,null),
+(67,'agronomico','general','—','Estación de crecimiento secundaria','Secondary growth season','QL',NULL,'select',false,null,null,null),
+(68,'agronomico','general','—','Régimen hídrico','Hydric regime','QL',NULL,'select',false,null,null,null);
 
 -- ── OPCIONES DE DESCRIPTORES (muestra representativa) ────
 

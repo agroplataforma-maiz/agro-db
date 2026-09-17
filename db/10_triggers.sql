@@ -10,7 +10,7 @@
 -- TRIGGER: Derivar municipio desde localidad (evita redundancia)
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION geografico.fn_validar_municipio_visita()
+CREATE OR REPLACE FUNCTION geo.fn_validar_municipio_visita()
 RETURNS TRIGGER AS $$
 DECLARE
     v_municipio_id INTEGER;
@@ -30,12 +30,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_validar_municipio_visita
-BEFORE INSERT OR UPDATE ON geografico.visita_campo
+BEFORE INSERT OR UPDATE ON geo.visita_campo
 FOR EACH ROW
-EXECUTE FUNCTION geografico.fn_validar_municipio_visita();
+EXECUTE FUNCTION geo.fn_validar_municipio_visita();
 
 -- Función para actualizar el campo geom de la tabla ubicacion a partir de latitud y longitud
-CREATE OR REPLACE FUNCTION geografico.set_ubicacion_geom()
+CREATE OR REPLACE FUNCTION geo.set_ubicacion_geom()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.geom IS NULL AND NEW.latitud IS NOT NULL AND NEW.longitud IS NOT NULL THEN
@@ -72,8 +72,8 @@ FOR EACH ROW EXECUTE FUNCTION recalcular_completitud();
 
 -- UBICACION
 CREATE TRIGGER trg_ubicacion_geom
-BEFORE INSERT OR UPDATE ON geografico.ubicacion
-FOR EACH ROW EXECUTE FUNCTION geografico.set_ubicacion_geom();
+BEFORE INSERT OR UPDATE ON core.ubicacion
+FOR EACH ROW EXECUTE FUNCTION geo.set_ubicacion_geom();
 
 -- Esta función se puede reutilizar para cualquier tabla que tenga un campo updated_at
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -92,7 +92,7 @@ EXECUTE FUNCTION public.set_updated_at();
 
 -- COMUNIDAD
 CREATE TRIGGER trg_comunidad_updated_at
-BEFORE UPDATE ON catalogo.comunidad
+BEFORE UPDATE ON core.comunidad
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
@@ -104,91 +104,86 @@ EXECUTE FUNCTION public.set_updated_at();
 
 -- UBICACION
 CREATE TRIGGER trg_ubicacion_updated_at
-BEFORE UPDATE ON geografico.ubicacion
+BEFORE UPDATE ON core.ubicacion
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- PARCELA
 CREATE TRIGGER trg_parcela_updated_at
-BEFORE UPDATE ON geografico.parcela
+BEFORE UPDATE ON core.parcela
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- HISTORIAL_PARCELA
 CREATE TRIGGER trg_historial_parcela_updated_at
-BEFORE UPDATE ON geografico.historial_parcela
+BEFORE UPDATE ON geo.historial_parcela
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- IMAGEN_SATELITAL
 CREATE TRIGGER trg_imagen_satelital_updated_at
-BEFORE UPDATE ON geografico.imagen_satelital
+BEFORE UPDATE ON geo.imagen_satelital
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- VUELO_DRON
 CREATE TRIGGER trg_vuelo_dron_updated_at
-BEFORE UPDATE ON geografico.vuelo_dron
+BEFORE UPDATE ON geo.vuelo_dron
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- PRODUCTO_DRON
 CREATE TRIGGER trg_producto_dron_updated_at
-BEFORE UPDATE ON geografico.producto_dron
+BEFORE UPDATE ON geo.producto_dron
 FOR EACH ROW        
 EXECUTE FUNCTION public.set_updated_at();
 
 -- ZONA_PRIORITARIA
 CREATE TRIGGER trg_zona_prioritaria_updated_at
-BEFORE UPDATE ON geografico.zona_prioritaria
+BEFORE UPDATE ON geo.zona_prioritaria
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- CAMBIO_USO_SUELO
 CREATE TRIGGER trg_cambio_uso_suelo_updated_at
-BEFORE UPDATE ON geografico.cambio_uso_suelo
+BEFORE UPDATE ON geo.cambio_uso_suelo
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- CAPA_SIG
 CREATE TRIGGER trg_capa_sig_updated_at
-BEFORE UPDATE ON geografico.capa_sig
+BEFORE UPDATE ON geo.capa_sig
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- VISITA_CAMPO
 CREATE TRIGGER trg_visita_campo_updated_at
-BEFORE UPDATE ON geografico.visita_campo
+BEFORE UPDATE ON geo.visita_campo
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- OBSERVACION_CAMPO
 CREATE TRIGGER trg_observacion_campo_updated_at
-BEFORE UPDATE ON geografico.observacion_campo
+BEFORE UPDATE ON geo.observacion_campo
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
--- MEDIO_PARCELA
-CREATE TRIGGER trg_medio_parcela_updated_at
-BEFORE UPDATE ON geografico.medio_parcela
-FOR EACH ROW
-EXECUTE FUNCTION public.set_updated_at();
 
 -- CICLO_AGRICOLA
 CREATE TRIGGER trg_ciclo_agricola_updated_at
-BEFORE UPDATE ON agronomico.ciclo_agricola
+BEFORE UPDATE ON catalogo.ciclo_agricola
 FOR EACH ROW    
 EXECUTE FUNCTION public.set_updated_at();
 
 -- GERMOPLASMA
 CREATE TRIGGER trg_germoplasma_updated_at
-BEFORE UPDATE ON agronomico.germoplasma
+BEFORE UPDATE ON core.germoplasma
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- CULTIVO
 CREATE TRIGGER trg_cultivo_updated_at
-BEFORE UPDATE ON agronomico.cultivo
+BEFORE UPDATE ON core.cultivo
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
@@ -211,7 +206,7 @@ FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 CREATE TRIGGER trg_variedades_updated_at
-BEFORE UPDATE ON catalogo.variedades
+BEFORE UPDATE ON agro.variedad
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ============================================================
@@ -279,7 +274,7 @@ $$;
 -- 1. AUDITORÍA DE CAMBIOS EN PARCELA
 CREATE TABLE IF NOT EXISTS auditoria.parcela_historial (
     id SERIAL PRIMARY KEY,
-    parcela_id INTEGER,
+    parcela_id UUID,
     operacion TEXT,
     datos_anteriores JSONB,
     datos_nuevos JSONB,
@@ -304,14 +299,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_parcela_auditoria
-AFTER INSERT OR UPDATE OR DELETE ON geografico.parcela
+AFTER INSERT OR UPDATE OR DELETE ON core.parcela
 FOR EACH ROW EXECUTE FUNCTION auditoria.fn_parcela_auditoria();
 
 
 -- 2. ALERTA NDVI BAJO
 CREATE TABLE IF NOT EXISTS ambiental.alerta_ndvi (
     id SERIAL PRIMARY KEY,
-    parcela_id INTEGER,
+    parcela_id UUID,
     ndvi DECIMAL(6,4),
     nivel TEXT,
     fecha TIMESTAMP DEFAULT NOW()
@@ -377,7 +372,7 @@ FOR EACH ROW EXECUTE FUNCTION ambiental.fn_validar_temperatura();
 
 
 -- 5. VALIDACIÓN ESPACIAL (GEOMETRÍA VACÍA)
-CREATE OR REPLACE FUNCTION geografico.fn_validar_geom()
+CREATE OR REPLACE FUNCTION geo.fn_validar_geom()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.geom IS NULL THEN
@@ -388,86 +383,125 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_validar_geom
-BEFORE INSERT OR UPDATE ON geografico.ubicacion
-FOR EACH ROW EXECUTE FUNCTION geografico.fn_validar_geom();
+BEFORE INSERT OR UPDATE ON core.ubicacion
+FOR EACH ROW EXECUTE FUNCTION geo.fn_validar_geom();
 
 -- Variedades evaluadas en radio de X km desde un punto dado
-CREATE OR REPLACE FUNCTION geografico.variedades_en_radio(
-    lat       DOUBLE PRECISION,
-    lng       DOUBLE PRECISION,
-    radio_km  DOUBLE PRECISION
-) RETURNS TABLE(
-    parcela_id      INT,
-    nombre_parcela  TEXT,
-    variedad_id     INT,
-    nombre_variedad TEXT,
-    distancia_km    NUMERIC,
-    municipio       TEXT,
-    altitud_msnm    SMALLINT,
-    ciclo           TEXT,
-    zona_adapt_ppal TEXT
+CREATE OR REPLACE FUNCTION geo.variedades_en_radio(
+    lat DOUBLE PRECISION,
+    lng DOUBLE PRECISION,
+    radio_km DOUBLE PRECISION DEFAULT 10
+)
+RETURNS TABLE (
+    parcela_id UUID,
+    nombre_parcela TEXT,
+    germoplasma_id UUID,
+    nombre_germoplasma TEXT,
+    distancia_km NUMERIC,
+    municipio TEXT,
+    altitud_msnm SMALLINT,
+    ciclo_agricola TEXT,
+    fecha_siembra DATE
 ) AS $$
-SELECT DISTINCT ON (p.id)
+SELECT DISTINCT ON (p.id, g.id)
     p.id,
     p.nombre::TEXT,
-    v.id,
-    v.nombre::TEXT,
-    ROUND(ST_Distance(
-        p.poligono::geography,
-        ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
-    ) / 1000.0, 2) AS distancia_km,
+    g.id,
+    g.nombre_local::TEXT,
+    ROUND(
+        (
+            ST_Distance(
+                p.poligono::geography,
+                ST_SetSRID(
+                    ST_MakePoint(lng, lat),
+                    4326
+                )::geography
+            ) / 1000.0
+        )::NUMERIC,
+        2
+    ) AS distancia_km,
     m.nombre::TEXT,
     u.altitud_m,
-    c.ciclo::TEXT,
-    c.zona_adapt_ppal::TEXT
-FROM geografico.parcela p
-LEFT JOIN social.productor pr    ON pr.id = p.productor_id
-LEFT JOIN catalogo.municipio m   ON m.id = pr.municipio_id
-LEFT JOIN geografico.ubicacion u ON u.id = p.ubicacion_id
-LEFT JOIN agronomico.cultivo c   ON c.parcela_id = p.id
-LEFT JOIN catalogo.variedades v  ON v.id = c.variedad_id
+    s.ciclo_agricola::TEXT,
+    s.fecha_siembra
+FROM core.parcela p
+LEFT JOIN core.productor pr
+    ON pr.id = p.productor_id
+LEFT JOIN catalogo.municipio m
+    ON m.id = pr.municipio_id
+LEFT JOIN core.ubicacion u
+    ON u.id = p.ubicacion_id
+LEFT JOIN core.siembra s
+    ON s.parcela_id = p.id
+LEFT JOIN core.germoplasma g
+    ON g.id = s.germoplasma_id
 WHERE
     p.poligono IS NOT NULL
     AND ST_DWithin(
         p.poligono::geography,
-        ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
+        ST_SetSRID(
+            ST_MakePoint(lng, lat),
+            4326
+        )::geography,
         radio_km * 1000
     )
-    AND v.activo = TRUE
-ORDER BY p.id, distancia_km;
+    AND g.id IS NOT NULL
+ORDER BY p.id, g.id, distancia_km;
 $$ LANGUAGE SQL STABLE;
 
 -- GeoJSON de todas las parcelas con datos de variedad (para el mapa)
-CREATE OR REPLACE FUNCTION geografico.parcelas_geojson(
-    ciclo_filtro     TEXT    DEFAULT NULL,
-    anio_filtro      INTEGER DEFAULT NULL
-) RETURNS JSON AS $$
+CREATE OR REPLACE FUNCTION core.parcelas_geojson(
+    ciclo_filtro TEXT DEFAULT NULL,
+    anio_filtro  INTEGER DEFAULT NULL
+)
+RETURNS JSON AS $$
 SELECT json_build_object(
     'type', 'FeatureCollection',
-    'features', json_agg(
-        json_build_object(
-            'type', 'Feature',
-            'geometry', ST_AsGeoJSON(p.poligono)::json,
-            'properties', json_build_object(
-                'parcela_id',     p.id,
-                'nombre',         p.nombre,
-                'productor',      pr.nombres,
-                'municipio',      m.nombre,
-                'altitud_msnm',   u.altitud_m,
-                'superficie_ha',  p.superficie_ha,
-                'ciclo',          c.ciclo,
-                'anio',           c.anio,
-                'variedad',       v.nombre
+    'features',
+    COALESCE(
+        json_agg(
+            json_build_object(
+                'type', 'Feature',
+                'geometry',
+                ST_AsGeoJSON(p.poligono)::json,
+                'properties',
+                json_build_object(
+                    'parcela_id',        p.id,
+                    'nombre',            p.nombre,
+                    'productor',         pr.nombres,
+                    'municipio',         m.nombre,
+                    'altitud_msnm',      u.altitud_m,
+                    'superficie_ha',     p.superficie_ha,
+                    'fecha_siembra',     s.fecha_siembra,
+                    'fecha_cosecha',     s.fecha_cosecha,
+                    'ciclo_agricola',    s.ciclo_agricola,
+                    'germoplasma_id',    g.id,
+                    'germoplasma',       g.nombre_local,
+                    'codigo_accesion',   g.codigo_accesion
+                )
             )
-        )
+        ),
+        '[]'::json
     )
 )
-FROM geografico.parcela p
-LEFT JOIN social.productor pr      ON pr.id = p.productor_id
-LEFT JOIN catalogo.municipio m     ON m.id = pr.municipio_id
-LEFT JOIN geografico.ubicacion u   ON u.id = p.ubicacion_id
-LEFT JOIN agronomico.cultivo c     ON c.parcela_id = p.id
-LEFT JOIN catalogo.variedades v    ON v.id = c.variedad_id
-WHERE (ciclo_filtro IS NULL OR c.ciclo::TEXT = ciclo_filtro)
-  AND (anio_filtro  IS NULL OR c.anio        = anio_filtro);
+FROM core.parcela p
+LEFT JOIN core.productor pr
+    ON pr.id = p.productor_id
+LEFT JOIN catalogo.municipio m
+    ON m.id = pr.municipio_id
+LEFT JOIN core.ubicacion u
+    ON u.id = p.ubicacion_id
+LEFT JOIN core.siembra s
+    ON s.parcela_id = p.id
+LEFT JOIN core.germoplasma g
+    ON g.id = s.germoplasma_id
+WHERE
+    (
+        ciclo_filtro IS NULL
+        OR s.ciclo_agricola = ciclo_filtro
+    )
+    AND (
+        anio_filtro IS NULL
+        OR EXTRACT(YEAR FROM s.fecha_siembra)::INTEGER = anio_filtro
+    );
 $$ LANGUAGE SQL STABLE;

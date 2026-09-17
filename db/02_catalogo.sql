@@ -462,6 +462,24 @@ CREATE INDEX idx_variable_ambiental_tipo ON catalogo.variable_ambiental(tipo);
 CREATE INDEX idx_variable_ambiental_nombre ON catalogo.variable_ambiental(nombre);
 
 -- ============================================================
+-- CATALOGO: fuente de información
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS catalogo.fuente_informacion (
+    id              SERIAL PRIMARY KEY,
+    codigo          VARCHAR(50) UNIQUE NOT NULL,
+    nombre          VARCHAR(150) UNIQUE NOT NULL,
+    descripcion     TEXT,
+    url             VARCHAR(500),
+    activo          BOOLEAN DEFAULT TRUE,
+    creado_en       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_fuente_informacion_nombre
+    ON catalogo.fuente_informacion(nombre);
+
+-- ============================================================
 -- 18. CATALOGO: tipo de amenaza
 -- Catálogo para clasificar los tipos de amenazas que enfrentan las comunidades y cultivos
 -- Basado en categorías comunes de riesgos y vulnerabilidades
@@ -1156,5 +1174,16 @@ VALUES
     ('IDENTIDAD_CULTURAL', 'Identidad cultural', 'El maíz como elemento de identidad cultural', 'identitario'),
     ('OTRO', 'Otro', 'Otro tipo de vínculo con el maíz no especificado', 'otro');
 
+INSERT INTO catalogo.fuente_informacion
+(codigo,nombre,descripcion)
+VALUES
+('NASA','NASA','National Aeronautics and Space Administration'),
+('CONAGUA','CONAGUA','Servicio Meteorológico Nacional'),
+('OPENWEATHER','OpenWeather','OpenWeather API'),
+('COPERNICUS','Copernicus','Programa Copernicus de la Unión Europea'),
+('INEGI','INEGI','Instituto Nacional de Estadística y Geografía'),
+('CONABIO','CONABIO','Comisión Nacional para el Conocimiento y Uso de la Biodiversidad'),
+('CONANP','CONANP','Comisión Nacional de Áreas Naturales Protegidas')
+ON CONFLICT (codigo) DO NOTHING;
 
 

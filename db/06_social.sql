@@ -566,7 +566,7 @@ CREATE INDEX IF NOT EXISTS idx_sistema_semilla_germoplasma ON social.sistema_sem
 -- ============================================================
 CREATE TABLE IF NOT EXISTS social.economia_cultivo (
     id                          SERIAL PRIMARY KEY,
-    cultivo_id                  INTEGER NOT NULL REFERENCES agronomico.cultivo(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    cultivo_id                  UUID NOT NULL REFERENCES core.cultivo(id) ON DELETE CASCADE ON UPDATE CASCADE,
     -- Costos (pesos MXN)
     costo_semilla               DECIMAL(10,2) CHECK (costo_semilla >= 0),
     costo_fertilizantes         DECIMAL(10,2) CHECK (costo_fertilizantes >= 0),
@@ -606,7 +606,7 @@ CREATE TABLE IF NOT EXISTS social.economia_cultivo (
     problema_insumos            BOOLEAN DEFAULT FALSE,
     problema_precio             BOOLEAN DEFAULT FALSE,
     problemas_descripcion       TEXT,
-    ciclo_agricola_id           INTEGER REFERENCES agronomico.ciclo_agricola(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    ciclo_agricola_id           INTEGER REFERENCES catalogo.ciclo_agricola(id) ON DELETE SET NULL ON UPDATE CASCADE,
     fecha_registro              DATE DEFAULT CURRENT_DATE,
     created_at                  TIMESTAMP DEFAULT NOW(),
     updated_at                  TIMESTAMP DEFAULT NOW()

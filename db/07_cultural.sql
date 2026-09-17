@@ -28,7 +28,7 @@ SET search_path TO cultural, public;
 CREATE TABLE IF NOT EXISTS cultural.saber_tradicional (
     id                          SERIAL PRIMARY KEY,
     productor_id                UUID NOT NULL REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a core.productor
-    comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
+    comunidad_id                UUID NOT NULL REFERENCES core.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
 
     -- Categoría del saber
     categoria_saber_agricola_id INTEGER NOT NULL REFERENCES catalogo.categoria_saber_agricola(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.categoria_saber_agricola
@@ -76,7 +76,7 @@ CREATE INDEX IF NOT EXISTS idx_saber_productor ON cultural.saber_tradicional(pro
 
 CREATE TABLE IF NOT EXISTS cultural.ritual_agricola (
     id                          SERIAL PRIMARY KEY,
-    comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
+    comunidad_id                UUID NOT NULL REFERENCES core.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
 
     -- Identificación
     nombre                      VARCHAR(200) NOT NULL,
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS cultural.ritual_productor (
 
 CREATE TABLE IF NOT EXISTS cultural.narrativa_oral (
     id                          SERIAL PRIMARY KEY,
-    comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
+    comunidad_id                UUID NOT NULL REFERENCES core.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
     productor_id                UUID NOT NULL REFERENCES core.productor(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a core.productor (narrador)
 
     -- Clasificación
@@ -182,7 +182,7 @@ CREATE INDEX IF NOT EXISTS idx_narrativa_productor ON cultural.narrativa_oral(pr
 
 CREATE TABLE IF NOT EXISTS cultural.gastronomia_tradicional (
     id                          SERIAL PRIMARY KEY,
-    comunidad_id                INTEGER NOT NULL REFERENCES catalogo.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
+    comunidad_id                UUID NOT NULL REFERENCES core.comunidad(id) ON DELETE CASCADE ON UPDATE CASCADE,    -- FK a catalogo.comunidad
 
     -- Identificación
     nombre_platillo             VARCHAR(200) NOT NULL,
@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS cultural.gastronomia_tradicional (
 
     -- Categoría
     uso_maiz_id INTEGER REFERENCES catalogo.uso_maiz(id) ON DELETE SET NULL ON UPDATE CASCADE,    -- FK a catalogo.uso_maiz
-    ocasion_id INTEGER REFERENCES catalogo.ocasion(id) ON DELETE SET NULL ON UPDATE CASCADE,    -- FK a catalogo.ocasion
+    ocasion_id INTEGER REFERENCES catalogo.evento_contexto(id) ON DELETE SET NULL ON UPDATE CASCADE,   -- FK a catalogo.ocasion
 
     -- Ingredientes y preparación
     ingredientes_principales    TEXT,
@@ -344,9 +344,9 @@ CREATE INDEX IF NOT EXISTS idx_identidad_productor ON cultural.identidad_cultura
 
 CREATE TABLE IF NOT EXISTS cultural.nombre_lengua_originaria (
     id                      SERIAL PRIMARY KEY,
-    germoplasma_id          INTEGER REFERENCES core.germoplasma(id),    -- FK a core.germoplasma
+    germoplasma_id          UUID REFERENCES core.germoplasma(id),    -- FK a core.germoplasma
     lengua_id               INTEGER REFERENCES catalogo.lengua(id),    -- FK a catalogo.lengua
-    comunidad_id            INTEGER REFERENCES core.comunidad(id),    -- FK a core.comunidad
+    comunidad_id            UUID REFERENCES core.comunidad(id),    -- FK a core.comunidad
 
     -- Nombre
     nombre                  VARCHAR(300) NOT NULL,
@@ -363,7 +363,7 @@ CREATE TABLE IF NOT EXISTS cultural.nombre_lengua_originaria (
     variantes               TEXT,   -- otros nombres en la misma lengua
 
     -- Fuente
-    informante_id           INTEGER REFERENCES core.productor(id),    -- FK a core.productor
+    informante_id           UUID REFERENCES core.productor(id),    -- FK a core.productor
     es_nombre_vigente       BOOLEAN DEFAULT TRUE,
     notas_linguisticas      TEXT,
 
@@ -494,7 +494,7 @@ CREATE TABLE IF NOT EXISTS cultural.sesion_entrevista (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS cultural.uso_maiz (
     id                      SERIAL PRIMARY KEY,
-    cultivo_id              INTEGER NOT NULL REFERENCES agronomico.cultivo(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    cultivo_id UUID NOT NULL REFERENCES core.cultivo(id) ON DELETE CASCADE ON UPDATE CASCADE,
     -- Distribución porcentual
     pct_autoconsumo         SMALLINT CHECK (pct_autoconsumo BETWEEN 0 AND 100),
     pct_venta               SMALLINT CHECK (pct_venta BETWEEN 0 AND 100),
