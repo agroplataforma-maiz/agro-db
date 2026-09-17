@@ -16,9 +16,23 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-huasteca2025}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      
-      - ./db:/sql:ro
-      - ./db/00_maestro.sql:/docker-entrypoint-initdb.d/00_maestro.sql:ro
+
+      - ../agro-db/db/00_maestro.sql:/docker-entrypoint-initdb.d/00_maestro.sql:ro
+      - ../agro-db/db/01_sistema.sql:/docker-entrypoint-initdb.d/01_sistema.sql:ro
+      - ../agro-db/db/02_catalogo.sql:/docker-entrypoint-initdb.d/02_catalogo.sql:ro
+      - ../agro-db/db/03_trazabilidad.sql:/docker-entrypoint-initdb.d/03_trazabilidad.sql:ro
+      - ../agro-db/db/04_core.sql:/docker-entrypoint-initdb.d/04_core.sql:ro
+      - ../agro-db/db/05_geografico.sql:/docker-entrypoint-initdb.d/05_geografico.sql:ro
+      - ../agro-db/db/06_social.sql:/docker-entrypoint-initdb.d/06_social.sql:ro
+      - ../agro-db/db/07_cultural.sql:/docker-entrypoint-initdb.d/07_cultural.sql:ro
+      - ../agro-db/db/08_agronomico.sql:/docker-entrypoint-initdb.d/08_agronomico.sql:ro
+      - ../agro-db/db/09_fenotipico.sql:/docker-entrypoint-initdb.d/09_fenotipico.sql:ro
+      - ../agro-db/db/09_indices.sql:/docker-entrypoint-initdb.d/09_indices.sql:ro
+      - ../agro-db/db/10_ambiental.sql:/docker-entrypoint-initdb.d/10_ambiental.sql:ro
+      - ../agro-db/db/10_triggers.sql:/docker-entrypoint-initdb.d/10_triggers.sql:ro
+      - ../agro-db/db/11_vistas.sql:/docker-entrypoint-initdb.d/11_vistas.sql:ro
+      - ../agro-db/db/12_datos_base.sql:/docker-entrypoint-initdb.d/12_datos_base.sql:ro
+      - ../agro-db/db/13_localidades_colonias.sql:/docker-entrypoint-initdb.d/13_localidades_colonias.sql:ro
 
       - ./backups:/backups
     ports:
