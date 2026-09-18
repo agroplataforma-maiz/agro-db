@@ -63,8 +63,8 @@ CREATE SCHEMA IF NOT EXISTS auditoria;
 \i /sql/06_social.sql
 \i /sql/07_cultural.sql
 \i /sql/09_fenotipico.sql
-\i /sql/09_indices.sql
 \i /sql/10_ambiental.sql
+\i /sql/09_indices.sql
 \i /sql/10_triggers.sql
 \i /sql/11_vistas.sql
 \i /sql/12_datos_base.sql
