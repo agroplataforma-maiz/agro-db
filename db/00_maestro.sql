@@ -54,18 +54,18 @@ CREATE SCHEMA IF NOT EXISTS auditoria;
 -- TRANSACCIÓN PRINCIPAL
 -- =========================================
 
-\i /sql/01_sistema.sql
-\i /sql/02_catalogo.sql
-\i /sql/03_trazabilidad.sql
-\i /sql/04_core.sql
-\i /sql/05_geografico.sql
-\i /sql/08_agronomico.sql
-\i /sql/06_social.sql
-\i /sql/07_cultural.sql
-\i /sql/09_fenotipico.sql
-\i /sql/10_ambiental.sql
-\i /sql/09_indices.sql
-\i /sql/10_triggers.sql
-\i /sql/11_vistas.sql
-\i /sql/12_datos_base.sql
-\i /sql/13_localidades_colonias.sql
+--\i /sql/01_sistema.sql
+--\i /sql/02_catalogo.sql
+--\i /sql/03_trazabilidad.sql
+--\i /sql/04_core.sql
+--\i /sql/05_geografico.sql
+--\i /sql/08_agronomico.sql
+--\i /sql/06_social.sql
+--\i /sql/07_cultural.sql
+--\i /sql/09_fenotipico.sql
+--\i /sql/10_ambiental.sql
+--\i /sql/09_indices.sql
+--\i /sql/10_triggers.sql
+--\i /sql/11_vistas.sql
+--\i /sql/12_datos_base.sql
+--\i /sql/13_localidades_colonias.sql

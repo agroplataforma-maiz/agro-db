@@ -35,8 +35,8 @@ services:
       - ../agro-db/db/13_localidades_colonias.sql:/docker-entrypoint-initdb.d/13_localidades_colonias.sql:ro
 
       - ./backups:/backups
-    ports:
-      - "5432:5432"
+    #ports:
+      #- "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agro_admin -d agroplataforma"]
       interval: 10s
@@ -57,8 +57,8 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       - ./pgadmin_servers.json:/pgadmin4/servers.json
-    ports:
-      - "8080:80"
+    #ports:
+      #- "8080:80"
     depends_on:
       db:
         condition: service_healthy
