@@ -9,7 +9,7 @@
 -- ============================================================
 -- TRIGGER: Derivar municipio desde localidad (evita redundancia)
 -- ============================================================
-
+/*
 CREATE OR REPLACE FUNCTION geo.fn_validar_municipio_visita()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -103,16 +103,26 @@ FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
 -- UBICACION
-CREATE TRIGGER trg_ubicacion_updated_at
+CREATE TRIGGER trg_ubicacion_actualizado_en
 BEFORE UPDATE ON core.ubicacion
 FOR EACH ROW
-EXECUTE FUNCTION public.set_updated_at();
+EXECUTE FUNCTION public.set_actualizado_en();
 
 -- PARCELA
-CREATE TRIGGER trg_parcela_updated_at
+CREATE OR REPLACE FUNCTION public.set_actualizado_en()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.actualizado_en := NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_parcela_updated_at ON core.parcela;
+
+CREATE TRIGGER trg_parcela_actualizado_en
 BEFORE UPDATE ON core.parcela
 FOR EACH ROW
-EXECUTE FUNCTION public.set_updated_at();
+EXECUTE FUNCTION public.set_actualizado_en();
 
 -- HISTORIAL_PARCELA
 CREATE TRIGGER trg_historial_parcela_updated_at
@@ -505,3 +515,5 @@ WHERE
         OR EXTRACT(YEAR FROM s.fecha_siembra)::INTEGER = anio_filtro
     );
 $$ LANGUAGE SQL STABLE;
+
+*/
