@@ -357,3 +357,26 @@ CREATE TABLE IF NOT EXISTS geo.observacion_campo (
 
 CREATE INDEX IF NOT EXISTS idx_obs_campo_parcela   ON geo.observacion_campo(parcela_id);
 CREATE INDEX IF NOT EXISTS idx_obs_campo_ubicacion ON geo.observacion_campo(ubicacion_id);
+
+-- ============================================================
+-- ACTIVIDADES REALIZADAS EN CAMPO
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS geo.actividad_campo (
+
+    id SERIAL PRIMARY KEY,
+    visita_id INTEGER NOT NULL REFERENCES geo.visita_campo(id) ON DELETE CASCADE,
+    practica_id INTEGER NOT NULL REFERENCES catalogo.practica_agricola(id) ON DELETE RESTRICT,
+    fecha_actividad DATE,
+    descripcion TEXT,
+    observaciones TEXT,
+    registrado_por UUID REFERENCES sistema.usuario(id) ON DELETE SET NULL,
+    creado_en TIMESTAMPTZ DEFAULT now(),
+    actualizado_en TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_actividad_campo_visita
+    ON geo.actividad_campo(visita_id);
+
+CREATE INDEX IF NOT EXISTS idx_actividad_campo_practica
+    ON geo.actividad_campo(practica_id);

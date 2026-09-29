@@ -238,6 +238,7 @@ CREATE TABLE core.siembra (
     germoplasma_id      UUID NOT NULL REFERENCES core.germoplasma(id)
                         ON DELETE CASCADE,
     fecha_siembra       DATE,
+    fecha_corte         DATE,
     fecha_cosecha       DATE,
     densidad            REAL,
     rendimiento_kg_ha   REAL,
@@ -245,15 +246,23 @@ CREATE TABLE core.siembra (
     UNIQUE (parcela_id, germoplasma_id, fecha_siembra)
 );
 
---- ============================================================
+-- ============================================================
 -- 7. CORE: ORGANIZACION
--- Se crea una organizacion en la que se encuentran administradores, investigadores y tecnicos de campo.
+--
+-- El administrador crea la organización y selecciona
+-- qué usuario será el propietario.
+--
+-- Una organizacion puede tener investigadores,
+-- técnicos de campo y productores.
+--
+-- Un usuario puede pertenecer a varias organizaciones.
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS core.organizacion (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nombre VARCHAR(200) NOT NULL UNIQUE,
     descripcion TEXT,
+    propietario_id UUID NOT NULL REFERENCES sistema.usuario(id),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
     actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
