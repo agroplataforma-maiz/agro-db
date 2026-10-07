@@ -112,8 +112,62 @@ CREATE TABLE IF NOT EXISTS fenotipico.muestra_nutrimental (
 
 CREATE INDEX IF NOT EXISTS idx_muestra_germoplasma ON fenotipico.muestra_nutrimental(germoplasma_id);
 
+CREATE INDEX IF NOT EXISTS idx_muestra_parcela ON fenotipico.muestra_nutrimental(parcela_id);
+
+CREATE INDEX IF NOT EXISTS idx_muestra_comunidad ON fenotipico.muestra_nutrimental(comunidad_id);
 -- ============================================================
--- 5. RESULTADO NUTRIMENTAL
+-- 5. SUBMUESTRA NUTRIMENTAL
+-- Características físicas de cada submuestra/mazorca
+-- ============================================================
+CREATE TABLE IF NOT EXISTS fenotipico.submuestra_nutrimental (
+    id                  SERIAL PRIMARY KEY,
+
+    muestra_id          INTEGER NOT NULL
+                        REFERENCES fenotipico.muestra_nutrimental(id)
+                        ON DELETE CASCADE
+                        ON UPDATE CASCADE,
+
+    numero_submuestra   SMALLINT NOT NULL,
+
+    color_mazorca       VARCHAR(50),
+
+    color_olote         VARCHAR(50),
+
+    largo_cm            DECIMAL(6,2),
+
+    diametro_cm         DECIMAL(6,2),
+
+    peso_mazorca_g      DECIMAL(8,2),
+
+    numero_hileras      SMALLINT,
+
+    created_at          TIMESTAMP DEFAULT NOW(),
+
+    updated_at          TIMESTAMP DEFAULT NOW(),
+
+    CONSTRAINT uq_muestra_submuestra
+        UNIQUE (muestra_id, numero_submuestra),
+
+    CONSTRAINT ck_numero_submuestra
+        CHECK (numero_submuestra > 0),
+
+    CONSTRAINT ck_largo_submuestra
+        CHECK (largo_cm IS NULL OR largo_cm >= 0),
+
+    CONSTRAINT ck_diametro_submuestra
+        CHECK (diametro_cm IS NULL OR diametro_cm >= 0),
+
+    CONSTRAINT ck_peso_mazorca_submuestra
+        CHECK (peso_mazorca_g IS NULL OR peso_mazorca_g >= 0),
+
+    CONSTRAINT ck_numero_hileras_submuestra
+        CHECK (numero_hileras IS NULL OR numero_hileras > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_submuestra_muestra ON fenotipico.submuestra_nutrimental(muestra_id);
+
+-- ============================================================
+-- 6. RESULTADO NUTRIMENTAL
 -- Resultados del análisis nutrimental
 -- ============================================================
 CREATE TABLE IF NOT EXISTS fenotipico.resultado_nutrimental (

@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS sistema.bitacora (
   fecha           TIMESTAMPTZ DEFAULT now(),
 
   CHECK (nivel IN ('INFO', 'WARNING', 'ERROR'))
-);
+);  
 
 -- ============================================================
 -- 5. CONFIGURACIÓN GENERAL
