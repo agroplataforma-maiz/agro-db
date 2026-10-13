@@ -151,13 +151,13 @@ INSERT INTO sistema.configuracion (clave, valor, descripcion) VALUES
 ('mensaje.politica_privacidad', 'Tus datos serán tratados conforme a la política de privacidad disponible en el sitio.', 'Política de privacidad') ON CONFLICT (clave) DO NOTHING;
 
 -- Usuario administrador inicial
-INSERT INTO sistema.usuario (username, email, hashed_password, nombre_completo, rol)
-VALUES ('admin', 'admin@tecvalles.mx', '$2b$12$WsKYjTfm4SPmvT42X7TtMO/gJw45KgocIqPjPoyKWX4vhoDie8PQu', 'Administrador', 'administrador'),
-('invitado','invitado@tecvalles.mx', '$2b$12$J4Ky5UhIaScZp.RFrb9iaeEooFWAlHtxjOlHlw/DnRNSHmxTJRgDa','invitado', 'visualizador'),
-('investigador1', 'investigador1@testing.com', '$2b$12$l7BvrSwwG/SVJ5kOJAavHu/tQcQVZ/c3ApfZAnynSusSn9Ba.a.Ei', 'Investigador 1 Demo', 'investigador'),
-('tecnico1', 'tecnico1@testing.com', '$2b$12$QU16Fmovi/EOJnv2IZKoS.BFrZ1cdBHFO4iJ5WdAojt2r2IwHd2dm', 'Técnico 1 Demo', 'tecnico_campo'),
-('consultor1', 'consultor1@testing.com', '$2b$12$VvU6CF7n/6ZMEkAyzbHp9u2dG9va9FCUlZVk2H/qAgcY7Hu6HoqXG', 'Visualizador Demo 1', 'visualizador'),
-('productor1', 'productor1@testing.com', '$2b$12$CAFYQcezB0sh0D0CDDWgEuos/UusJjCE/N91Q1iO.H26Df7EmYTFi', 'Productor 1 Demo', 'productor');
+--INSERT INTO sistema.usuario (username, email, hashed_password, nombre_completo, rol)
+--VALUES ('admin', 'admin@tecvalles.mx', '$2b$12$WsKYjTfm4SPmvT42X7TtMO/gJw45KgocIqPjPoyKWX4vhoDie8PQu', 'Administrador', 'administrador'),
+--('invitado','invitado@tecvalles.mx', '$2b$12$J4Ky5UhIaScZp.RFrb9iaeEooFWAlHtxjOlHlw/DnRNSHmxTJRgDa','invitado', 'visualizador'),
+--('investigador1', 'investigador1@testing.com', '$2b$12$l7BvrSwwG/SVJ5kOJAavHu/tQcQVZ/c3ApfZAnynSusSn9Ba.a.Ei', 'Investigador 1 Demo', 'investigador'),
+--('tecnico1', 'tecnico1@testing.com', '$2b$12$QU16Fmovi/EOJnv2IZKoS.BFrZ1cdBHFO4iJ5WdAojt2r2IwHd2dm', 'Técnico 1 Demo', 'tecnico_campo'),
+--('consultor1', 'consultor1@testing.com', '$2b$12$VvU6CF7n/6ZMEkAyzbHp9u2dG9va9FCUlZVk2H/qAgcY7Hu6HoqXG', 'Visualizador Demo 1', 'visualizador'),
+--('productor1', 'productor1@testing.com', '$2b$12$CAFYQcezB0sh0D0CDDWgEuos/UusJjCE/N91Q1iO.H26Df7EmYTFi', 'Productor 1 Demo', 'productor');
 
 
 

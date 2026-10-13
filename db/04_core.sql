@@ -3,7 +3,6 @@
 --    Latitud, longitud, altitud y metadatos geoespaciales
 --    Ubicación geoespacial con PostGIS
 -- ============================================================
-
 CREATE TABLE IF NOT EXISTS core.ubicacion (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nombre              VARCHAR(100),
@@ -37,7 +36,6 @@ CREATE INDEX IF NOT EXISTS idx_ubicacion_geom ON core.ubicacion USING GIST (geom
 --    Agrupación sociocultural o administrativa de localidades
 --    Ej: ejidos, rancherías, zonas indígenas
 -- ============================================================
-
 CREATE TABLE IF NOT EXISTS core.comunidad (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nombre              VARCHAR(200) NOT NULL,
@@ -90,7 +88,6 @@ ON core.comunidad USING gin(to_tsvector('spanish', nombre));
 -- Referencia catalogo.municipio, catalogo.localidad
 -- y core.comunidad en lugar de catalogo.comunidad
 -- ============================================================
-
 CREATE TABLE IF NOT EXISTS core.productor (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Identificador único del productor
     nombres             VARCHAR(150) NOT NULL, -- Nombres del productor
@@ -134,13 +131,15 @@ CREATE TABLE IF NOT EXISTS core.productor (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS core.germoplasma (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    identificador       VARCHAR(200) UNIQUE NOT NULL,
     codigo_accesion     VARCHAR(30) UNIQUE NOT NULL,  -- ej. HP-2025-001
     nombre_local        VARCHAR(200) NOT NULL,
+    nombre_asignado_productor VARCHAR(200) NOT NULL,
     nombre_lengua_orig  VARCHAR(200),
     raza_id             INTEGER REFERENCES catalogo.raza_maiz(id) 
                         ON DELETE SET NULL 
-                        ON UPDATE CASCADE,
-    color_grano_id      INTEGER REFERENCES catalogo.color_grano(id) 
+                        ON UPDATE CASCADE, 
+    color_grano_id      INTEGER REFERENCES catalogo.color_grano(id)
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE,
     ciclo_vegetativo    VARCHAR(50),
@@ -149,23 +148,30 @@ CREATE TABLE IF NOT EXISTS core.germoplasma (
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE,
     origen_muestra_id   INTEGER REFERENCES 
-                        trazabilidad.origen_material_agricola(id) 
+                        trazabilidad.origen_material_agricola(id)
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE,
     comunidad_id        UUID  NOT NULL REFERENCES core.comunidad(id) 
                         ON DELETE RESTRICT 
-                        ON UPDATE CASCADE,    -- FK a core.comunidad
+                        ON UPDATE CASCADE,  -- FK a core.comunidad
     ubicacion_id        UUID REFERENCES core.ubicacion(id) 
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE, -- FK ubicación geoespacial
-    colector_id         UUID REFERENCES sistema.usuario(id) 
+    tecnico_id          UUID REFERENCES sistema.usuario(id) 
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE, -- técnico de campo que colecta
+    productor_id        UUID REFERENCES sistema.usuario(id) 
+                        ON DELETE SET NULL 
+                        ON UPDATE CASCADE, -- productor dueño de la semilla                    
     notas               TEXT,
+    estado              VARCHAR(20) NOT NULL DEFAULT 'activo'
+                        CHECK (estado IN ('activo', 'inactivo')),
     fecha_registro      DATE DEFAULT CURRENT_DATE,
     creado_en           TIMESTAMPTZ DEFAULT now(),
     actualizado_en      TIMESTAMPTZ DEFAULT now(),
-
+    fuente_id           INTEGER REFERENCES trazabilidad.fuente(id)
+                        ON DELETE SET NULL
+                        ON UPDATE CASCADE,
     CHECK (ciclo_vegetativo IN ('precoz','intermedio','tardio')),
     CHECK (duracion_dias > 0)
 );
@@ -174,12 +180,13 @@ CREATE INDEX IF NOT EXISTS idx_germoplasma_nombre ON core.germoplasma USING gin(
 CREATE INDEX IF NOT EXISTS idx_germoplasma_comunidad ON core.germoplasma(comunidad_id);
 CREATE INDEX IF NOT EXISTS idx_germoplasma_raza ON core.germoplasma(raza_id);
 CREATE INDEX IF NOT EXISTS idx_germoplasma_color ON core.germoplasma(color_grano_id);
-
+CREATE INDEX IF NOT EXISTS idx_germoplasma_fuente ON core.germoplasma(fuente_id);
 -- ============================================================
 -- 4. CORE: PARCELA
 --    Información geoespacial de las parcelas agrícolas
 --    Polígono de la parcela, sistema de manejo, tenencia, topografía
 -- ============================================================
+
 CREATE TABLE IF NOT EXISTS core.parcela (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nombre              VARCHAR(150),
@@ -249,15 +256,9 @@ CREATE TABLE core.siembra (
 -- ============================================================
 -- 7. CORE: ORGANIZACION
 --
--- El administrador crea la organización y selecciona
--- qué usuario será el propietario.
---
--- Una organizacion puede tener investigadores,
--- técnicos de campo y productores.
---
--- Un usuario puede pertenecer a varias organizaciones.
+-- El administrador crea la organizacion y selecciona
+-- que usuario sera el propietario.
 -- ============================================================
-
 CREATE TABLE IF NOT EXISTS core.organizacion (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nombre VARCHAR(200) NOT NULL UNIQUE,
@@ -268,6 +269,14 @@ CREATE TABLE IF NOT EXISTS core.organizacion (
     actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ============================================================
+-- 8. CORE: MIEMBROS DE LA ORGANIZACION
+--
+-- Una organizacion puede tener investigadores,
+-- técnicos de campo y productores.
+--
+-- Un usuario puede pertenecer a varias organizaciones.
+-- ============================================================
 CREATE TABLE IF NOT EXISTS core.organizacion_miembro (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     organizacion_id UUID NOT NULL REFERENCES core.organizacion(id) ON DELETE CASCADE,
