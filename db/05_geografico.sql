@@ -15,7 +15,6 @@ SET search_path TO geo, public;
 --  1. HISTORIAL DE USO DE LA PARCELA
 --  Cultivos anteriores, uso de fertilizantes, continuidad de maíz nativo
 -- ============================================================
-
 CREATE TABLE IF NOT EXISTS geo.historial_parcela (
     id                      SERIAL PRIMARY KEY,
     parcela_id              UUID REFERENCES core.parcela(id) 

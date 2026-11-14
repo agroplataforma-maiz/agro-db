@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS core.productor (
     ubicacion_id        UUID REFERENCES core.ubicacion(id) 
                         ON DELETE SET NULL 
                         ON UPDATE CASCADE, -- FK ubicación geoespacial
+    activo              BOOLEAN NOT NULL DEFAULT TRUE,                    
     creado_en           TIMESTAMPTZ DEFAULT now(),
     actualizado_en      TIMESTAMPTZ DEFAULT now(),
 

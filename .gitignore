@@ -10,3 +10,4 @@ pgadmin_data/*.backup
 11_vistas.sql.backup
 docker-compose.yml.backup
 00_maestro.sql.backup
+agroplataforma_backup.sql
